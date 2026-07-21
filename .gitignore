@@ -11,12 +11,15 @@ Dataset/*.zip
 data/processed/
 models/
 outputs/
+tmp/
+reproducibility_backups/
 
 # Operating-system and editor files
 .DS_Store
 Thumbs.db
 .vscode/
 ~$*.docx
+node.*.log
 
 # Never commit credentials or local configuration
 .env

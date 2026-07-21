@@ -1,0 +1,9 @@
+horizon_minutes,model,n_observations,mae,mae_ci_low,mae_ci_high,rmse,rmse_ci_low,rmse_ci_high,smape_percent,smape_percent_ci_low,smape_percent_ci_high,seasonal_naive_mae,mae_improvement_vs_seasonal_percent,confidence_level,ci_method,bootstrap_blocks,bootstrap_replicates,test_role
+5,Persistence,5228,1.11e+04,5.7e+03,1.63e+04,3.45e+04,2.21e+04,4.36e+04,69.5,62.5,76.7,1.58e+04,29.9,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+5,Seasonal Naive,5228,1.58e+04,7.83e+03,2.47e+04,4.19e+04,2.6e+04,5.44e+04,91.4,81.3,102,1.58e+04,0,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+5,XGBoost,5228,1.59e+04,9.32e+03,2.26e+04,3.38e+04,2.29e+04,4.24e+04,129,113,146,1.58e+04,-0.863,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+5,LSTM,5228,1.15e+04,5.94e+03,1.78e+04,3.18e+04,2.03e+04,4.1e+04,87.2,75.6,101,1.58e+04,27.3,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+60,Persistence,5228,1.41e+04,7.54e+03,2.14e+04,3.96e+04,2.64e+04,5.08e+04,83.2,76.3,90.3,1.58e+04,10.5,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+60,Seasonal Naive,5228,1.58e+04,8.44e+03,2.37e+04,4.19e+04,2.73e+04,5.37e+04,91.4,82.1,101,1.58e+04,0,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+60,XGBoost,5228,2.56e+04,1.49e+04,3.72e+04,4.69e+04,3.17e+04,5.99e+04,142,129,156,1.58e+04,-62.3,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
+60,LSTM,5228,1.37e+04,7.26e+03,2.1e+04,3.43e+04,2.1e+04,4.5e+04,129,115,144,1.58e+04,13.1,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only

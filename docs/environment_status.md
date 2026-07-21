@@ -16,25 +16,15 @@
 | 类别 | 已验证包 |
 |---|---|
 | 数据与存储 | pandas 3.0.1、numpy 2.3.5、pyarrow 25.0.0、PyYAML 6.0.3 |
-| 建模与统计 | scikit-learn 1.9.0、XGBoost 3.3.0、SciPy 1.18.0、statsmodels 0.14.6 |
+| 建模与统计 | scikit-learn 1.9.0、XGBoost 3.3.0、TensorFlow/Keras 2.20.0、SciPy 1.18.0、statsmodels 0.14.6 |
 | 图形与解释 | matplotlib 3.11.1、seaborn 0.13.2、SHAP 0.52.0 |
 | Notebook 内核 | ipykernel 7.3.0（由 VS Code Jupyter 扩展使用） |
 
 ## TensorFlow 状态
 
-`tensorflow==2.20.0`已写入`requirements.txt`，并且该版本官方支持 Python 3.12；但在本机当前网络环境下，pip 在解析/下载该包时长期停滞且没有写入 wheel，因此尚未安装。其余第0天任务及 XGBoost/EDA 环境已完成。
-
-待网络正常时，在项目根目录执行下列命令即可补齐 LSTM 环境：
+`tensorflow==2.20.0`已安装到项目`.venv`并完成导入、模型训练及`.keras`重载验证。由于项目绝对路径较长，首次直接安装触发了 Windows 长路径限制；最终通过指向项目根目录的临时短路径 junction 完成安装，随后删除该 junction。项目解释器现在可直接运行 LSTM：
 
 ```powershell
-.\\.venv\\Scripts\\Activate.ps1
-python -m pip install tensorflow==2.20.0
+.\.venv\Scripts\python.exe -c "import tensorflow as tf; print(tf.__version__)"
+.\.venv\Scripts\python.exe src/06_lstm.py --horizon 15
 ```
-
-若常规索引仍然卡住，可使用已核实的 PyPI 官方 Windows/Python 3.12 wheel：
-
-```powershell
-python -m pip install https://files.pythonhosted.org/packages/f9/37/b97abb360b551fbf5870a0ee07e39ff9c655e6e3e2f839bc88be81361842/tensorflow-2.20.0-cp312-cp312-win_amd64.whl
-```
-
-安装后应执行`python -c "import tensorflow as tf; print(tf.__version__)"`，再运行 LSTM 脚本。

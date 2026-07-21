@@ -1,0 +1,13 @@
+source_file,horizon_minutes,model,n_rows,timestamp_start,timestamp_end,unique_timestamps,null_cells,negative_predictions,actual_label_matches_fixed_threshold,predicted_label_matches_fixed_threshold,all_models_share_target_labels,expected_models_per_timestamp_horizon
+outputs/tables/pred_baselines_test.csv,5,Persistence,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_baselines_test.csv,5,Seasonal Naive,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_xgb_test_h5.csv,5,XGBoost,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,801,True,True,True,4
+outputs/tables/pred_lstm_test_h5.csv,5,LSTM,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_baselines_test.csv,15,Persistence,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_baselines_test.csv,15,Seasonal Naive,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_xgb_test_h15.csv,15,XGBoost,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,618,True,True,True,4
+outputs/tables/pred_lstm_test_h15.csv,15,LSTM,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_baselines_test.csv,60,Persistence,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_baselines_test.csv,60,Seasonal Naive,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4
+outputs/tables/pred_xgb_test_h60.csv,60,XGBoost,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,664,True,True,True,4
+outputs/tables/pred_lstm_test_h60.csv,60,LSTM,5228,1970-04-13T20:20:00+00:00,1970-05-01T23:55:00+00:00,5228,0,0,True,True,True,4

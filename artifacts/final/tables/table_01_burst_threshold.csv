@@ -1,0 +1,2 @@
+definition,quantile,comparison,p95_threshold,train_rows,time_semantics
+training token_load quantile,0.95,token_load >= threshold,315246.19999999995,24393,relative seconds on a synthetic UTC axis

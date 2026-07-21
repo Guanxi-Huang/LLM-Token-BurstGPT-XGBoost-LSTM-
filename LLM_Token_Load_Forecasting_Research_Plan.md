@@ -14,13 +14,13 @@
 
 `Y_t = Σ(Request Tokens_i + Response Tokens_i), i ∈ t`
 
-主要任务：
+第1周结束后固定以下三个研究问题：
 
-- 回归任务：预测未来15分钟的Token总负载。
-- 辅助预测窗口：未来5分钟、60分钟。
-- 突发识别：当未来Token负载超过训练集的第95百分位时，定义为突发。
-- 模型比较：Persistence/Seasonal Naive、XGBoost、LSTM。
-- 扩展分析：GPT-3.5与GPT-4、API与Conversation场景的表现差异。
+- **RQ1（负载特征）：** BurstGPT 1/2号成功请求聚合成5分钟序列后，Token总负载呈现怎样的时间变化、分布与突发特征？
+- **RQ2（预测比较）：** 在未来5、15、60分钟预测中，XGBoost与LSTM相对Persistence和Seasonal Naive基线的误差表现如何（15分钟为主任务）？
+- **RQ3（突发与稳健性）：** 将预测负载与仅由训练集确定的P95阈值比较时，各方法识别突发的能力如何，结论能否在只作跨时期测试的3号批次保持？
+
+研究问题与模型集合至此冻结：学习模型仅为XGBoost和LSTM，基线仅为Persistence与Seasonal Naive；不再增加模型种类。GPT-4与API占比只用于已有字段支持的分组误差分析，不新增研究问题。
 
 ### 1.2 方法-工具对应表
 
@@ -30,7 +30,7 @@
 | 数据质量检查 | 缺失值、重复记录、零响应Token、时间间隔检查 | Pandas、NumPy |
 | 时间序列构建 | 请求级数据聚合为5分钟时间窗 | `resample()`、`groupby_dynamic()` |
 | 描述统计 | 趋势、周期、分布、峰谷比、模型构成 | Matplotlib、Seaborn |
-| 周期分析 | 小时/星期模式、自相关、周期图 | statsmodels、SciPy |
+| 周期分析 | 相对24小时/7天相位、自相关、周期图 | statsmodels、SciPy |
 | 特征工程 | 滞后、滚动统计、周期编码、模型类型占比 | Pandas、scikit-learn |
 | 简单基线 | Persistence、24小时季节朴素预测 | NumPy、scikit-learn |
 | 机器学习 | XGBoost回归 | `xgboost.XGBRegressor` |
@@ -47,13 +47,12 @@
 
 - 滞后负载：`lag_1、2、3、6、12、24、48、288`。
 - 滚动特征：过去15、30、60分钟的均值、标准差、最大值。
-- 周期特征：小时、星期、是否周末，并进行正余弦编码。
+- 周期特征：由相对秒数构造24小时与7天周期的正余弦相位。因采集日历未公开，不构造真实星期、周末、节假日等日历特征。
 - 负载结构：请求数量、平均输入Token、平均输出Token。
-- 服务结构：GPT-4请求占比、API请求占比。
-- 会话特征：活跃Session数、每Session平均请求数。
+- 服务结构：GPT-4请求占比、API请求占比；其中API/Conversation来自唯一的`Log Type`字段，不虚构独立“调用方式”字段。
 - 变化特征：Token负载一阶差分、短期增长率。
 
-注意：未来请求的Response Tokens和Total Tokens在预测时不可知，只能作为预测目标或历史滞后特征。所有标准化、突发阈值和特征选择都必须只用训练集拟合。
+注意：1/2号主实验文件没有`Session ID`和`Elapsed time`，因此删除活跃Session数、每Session平均请求数和响应耗时特征。未来请求的Response Tokens和Total Tokens在预测时不可知，只能作为预测目标或历史滞后特征。所有标准化、突发阈值和特征选择都必须只用训练集拟合。
 
 ### 1.4 实验设计
 
@@ -142,7 +141,7 @@
 
 | 数据集 | 时间及内容 | 论文用途 | 推荐程度 |
 |---|---|---|---|
-| [BurstGPT v2.0](https://github.com/HPMLL/BurstGPT) | BurstGPT_1/2覆盖连续121天，约529万条；BurstGPT_3覆盖另110天，约534万条。含时间戳、Session、模型、输入/输出/总Token、日志类型和响应时间 | 核心训练、验证、测试以及跨时期稳健性分析 | 必须使用 |
+| [BurstGPT v2.0](https://github.com/HPMLL/BurstGPT) | 1/2号覆盖连续121天，含相对时间戳、模型、输入/输出/总Token和`Log Type`；3号另覆盖110天并额外含`Session ID`、`Elapsed time`。1/2号不支持Session或耗时特征 | 核心训练、验证、测试以及跨时期稳健性分析 | 必须使用 |
 | [Azure LLM Inference Dataset 2024](https://github.com/Azure/AzurePublicDataset/blob/master/AzureLLMInferenceDataset2024.md) | 2024年5月10-19日，多种Azure LLM服务；含时间戳、Context Tokens、Generated Tokens | 独立小样本复现实验、检查结论能否迁移到另一真实服务 | 建议使用 |
 | [Azure LLM Inference Dataset 2023](https://github.com/Azure/AzurePublicDataset/blob/master/AzureLLMInferenceDataset2023.md) | 2023年11月11日，两种Azure LLM服务；含时间戳、输入和输出Token | 补充性突发案例研究；时间太短，不适合主模型训练 | 可选 |
 | [Azure LMM Inference Dataset 2025](https://github.com/Azure/AzurePublicDataset/blob/master/AzureLMMInferenceDataset2025.md) | 2024年10月采集的多模态推理轨迹，增加图像数量字段 | 可在展望中讨论多模态负载，不应与文本LLM直接合并 | 非核心 |
@@ -228,9 +227,9 @@
 **目标：** 生成唯一的、带零值时间窗的5分钟目标序列，确定突发定义，并建立必须击败的朴素基线。
 
 1. **合并主实验批次但保持时间顺序（约2小时）。** 在`src/02_build_series.py`读取`requests_1.parquet`和`requests_2.parquet`，用`pd.concat`合并后按时间升序排序。先使用`assert df[timestamp].is_monotonic_increasing`检查排序，再保存原始批次标识，以便后续核查是否在批次边界产生时间空洞。
-2. **聚合为完整5分钟网格（约3小时）。** 将时间设为索引后执行`resample("5min")`：目标`token_load`为`total_tokens.sum()`；同时聚合`request_count`、`mean_input_tokens`、`mean_output_tokens`、`nunique(session)`，以及 GPT-4/API 的请求数。使用`asfreq("5min", fill_value=0)`或重建完整`date_range`，确保无请求的时间窗也有一行且负载为零；均值类特征在请求数为零时保留`NaN`，稍后只用历史信息填充。保存为`data/processed/series_5min.parquet`。
+2. **聚合为完整5分钟网格（约3小时）。** 将时间设为索引后执行`resample("5min")`：目标`token_load`为`total_tokens.sum()`；同时聚合`request_count`、`mean_request_tokens`、`mean_response_tokens`，以及 GPT-4/API 的请求数。1/2号没有Session字段，不计算会话特征。使用`asfreq("5min", fill_value=0)`或重建完整`date_range`，确保无请求的时间窗也有一行且负载为零；均值类特征在请求数为零时保留`NaN`，稍后只用历史信息填充。保存为`data/processed/series_5min.parquet`。
 3. **人工核验聚合正确性（约1小时）。** 随机挑选三个5分钟窗口，回到请求级 Parquet，用布尔条件筛选原始请求并手动求和，与聚合结果逐项比较；将窗口起止时间和两种计算结果写入`docs/experiment_log.md`。这一检查可防止时区、闭区间和重复聚合错误。
-4. **完成探索性分析（约5小时）。** 在`notebooks/02_eda.ipynb`用`matplotlib`和`seaborn`按统一风格绘制并保存：完整时间趋势、一个典型周的5分钟曲线、按小时/星期几的平均负载热图、Token 负载对数分布、请求数与 Token 负载散点图、模型/调用方式占比随时间变化、ACF/PACF 图（`statsmodels.graphics.tsaplots`）。每张图下用1–2句话记录观察结论，图只展示能服务于特征、基线或讨论部分的信息。
+4. **完成探索性分析（约5小时）。** 在`notebooks/02_eda.ipynb`用`matplotlib`和`seaborn`按统一风格绘制并保存：完整时间趋势、一个典型周的5分钟曲线、按相对日内时段/周内相位的平均负载热图、Token 负载对数分布、请求数与 Token 负载散点图、模型/`Log Type`占比随时间变化、ACF/PACF 图（`statsmodels.graphics.tsaplots`）。每张图下用1–2句话记录观察结论，图只展示能服务于特征、基线或讨论部分的信息；不得把相对周相位解释为真实星期或周末。
 5. **只用训练期定义切分点与突发阈值（约2小时）。** 在序列建立后按时间前70%、中15%、后15%切成`train`、`valid`、`test`，打印每段的起止时间和行数，写入`outputs/tables/table_01_split_summary.csv`。仅对`train["token_load"]`计算`p95_threshold = np.quantile(..., 0.95)`；用这个固定阈值为三段分别创建`actual_burst`。严禁对验证集或测试集重新计算 P95。
 6. **实现两条基线（约3小时）。** 在`src/04_baselines.py`为每个预测窗口`h ∈ {1,3,12}`个5分钟步长生成预测：Persistence 使用`y[t-h]`，Seasonal Naive 使用同一时刻前一天的`y[t-288]`。预测必须先向后对齐到未来目标，之后再计算误差，不能将未来真实值复制到当前行。生成`pred_persistence_h15`和`pred_seasonal_h15`等列，保存验证与测试预测表。
 7. **先跑通评价函数（约2小时）。** 在`src/07_evaluate.py`实现 MAE、RMSE、sMAPE（分母加极小量防止0/0）、Precision、Recall、F1、Average Precision/PR-AUC 和混淆矩阵；对基线的预测负载用同一训练集 P95 转为`predicted_burst`。将基线验证/测试指标写入`outputs/tables/table_02_baseline_results.csv`，并画出一段典型日期的“真实值—两条基线—P95阈值”折线图。
@@ -242,7 +241,7 @@
 **目标：** 用只包含预测时点可得信息的特征训练 XGBoost，并保留可解释的调参与特征重要性证据。
 
 1. **定义特征可用性清单（约1小时）。** 在`docs/data_dictionary.md`增加“时点`t`可用/不可用”一列。允许：历史负载、历史请求结构、日历时间；禁止：`t+h`的输出 Token、总 Token、请求数、未来模型占比。对每一项准备写入模型的列都能回答“在预测时点如何获得”。
-2. **生成无泄漏特征（约4小时）。** 在`src/03_features.py`中先按时间排序，再使用`shift(1)`创建滞后特征`lag_1, lag_2, lag_3, lag_6, lag_12, lag_24, lag_48, lag_288`；滚动均值、标准差、最大值必须写成`series.shift(1).rolling(window).agg(...)`，窗口取3、6、12个5分钟点（15、30、60分钟）。添加`hour_sin/hour_cos`、`dow_sin/dow_cos`、`is_weekend`；模型/API占比采用过去窗口的历史聚合值。目标按`target_h15 = token_load.shift(-3)`生成。最后删除因滞后或目标移位产生的缺失行。
+2. **生成无泄漏特征（约4小时）。** 在`src/03_features.py`中先按时间排序，再使用`shift(1)`创建滞后特征`lag_1, lag_2, lag_3, lag_6, lag_12, lag_24, lag_48, lag_288`；滚动均值、标准差、最大值必须写成`series.shift(1).rolling(window).agg(...)`，窗口取3、6、12个5分钟点（15、30、60分钟）。添加`relative_day_sin/cos`和`relative_week_sin/cos`，不添加`is_weekend`或真实星期标签；模型/API占比采用过去窗口的历史聚合值。目标按`target_h15 = token_load.shift(-3)`生成。最后删除因滞后或目标移位产生的缺失行。
 3. **按目标时间严格切分（约1小时）。** 对每个预测窗口，样本所属集合由**目标时间**决定：`target_time = feature_time + h × 5分钟`；训练样本的目标不得进入验证期，验证样本的目标不得进入测试期。将特征名称、样本数、每个集合的起止时间写入`outputs/tables/table_03_feature_split_summary.csv`。这是本研究最关键的时间泄漏检查。
 4. **先训练默认模型，验证数据管道（约2小时）。** 用`xgboost.XGBRegressor(objective="reg:squarederror", random_state=42, n_jobs=-1)`训练15分钟模型；只用训练集拟合，不需要标准化。将验证集预测和真实值存为`outputs/tables/pred_xgb_valid_h15.csv`，检查预测是否全为常数、负数或与真实值时间错位。
 5. **小范围调参（约4小时）。** 使用`RandomizedSearchCV`配合`TimeSeriesSplit`，或明确的验证集循环，只搜索有限组合：`max_depth`（3、5、7）、`learning_rate`（0.02、0.05、0.1）、`n_estimators`（300、600、1000）、`min_child_weight`（1、5、10）、`subsample`（0.7、0.9、1.0）和`colsample_bytree`（0.7、0.9、1.0）。评分以验证集 MAE 为主，同时记录 F1；每次结果写入`outputs/tables/xgb_tuning_log.csv`。不得读取测试集或基于测试集选择参数。
@@ -274,7 +273,7 @@
 2. **汇总统一预测长表（约2小时）。** 将各模型、各预测窗口的测试集预测整理为长格式表：`timestamp`、`horizon`、`model`、`y_true`、`y_pred`、`actual_burst`、`predicted_burst`；检查所有模型在同一`timestamp+horizon`有相同真实标签。保存`outputs/tables/test_predictions_all_models.csv`。
 3. **计算主要指标和置信信息（约3小时）。** 用`src/07_evaluate.py`分别计算 MAE、RMSE、sMAPE、Precision、Recall、F1、PR-AUC、混淆矩阵 TP/FP/FN/TN，以及相对 Seasonal Naive 的 MAE 改善率。主要表按15分钟窗口排序，5/60分钟放入附表；将所有数字保留3位有效小数，保存为`table_04_main_results.csv`和`table_05_burst_results.csv`。
 4. **制作核心图表（约3小时）。** 绘制并编号保存：(a) 典型测试周的真实负载与三类预测曲线；(b) 突发窗口的局部放大图及训练集 P95 线；(c) 各模型 MAE/F1 对比柱形图；(d) PR 曲线；(e) 三个模型的突发混淆矩阵。所有图使用同一单位、颜色和图例，图下在实验日志中写出一句解释，防止图表成为无结论装饰。
-5. **做预先定义的误差分析（约3小时）。** 仅按研究计划中的维度分组：真实负载是否为突发、小时段、星期几、GPT-4占比高/低、API占比高/低；比较每组的 MAE 和偏差`y_pred-y_true`。对于总序列模型，分组用于解释对应时段的预测误差，不把未来同一时间窗的构成指标当作预测特征。输出`table_06_segment_errors.csv`和2–3张图。
+5. **做预先定义的误差分析（约3小时）。** 仅按研究计划中的维度分组：真实负载是否为突发、相对日内时段、相对周内相位、GPT-4占比高/低、API占比高/低；比较每组的 MAE 和偏差`y_pred-y_true`。对于总序列模型，分组用于解释对应时段的预测误差，不把未来同一时间窗的构成指标当作预测特征，也不把相对周相位命名为真实星期/周末。输出`table_06_segment_errors.csv`和2–3张图。
 6. **最小消融实验（约2小时）。** 只针对15分钟 XGBoost，比较“完整特征”“去除服务结构特征”“仅滞后+日历特征”三种设置，配置与训练/验证边界不变。消融只在验证集选方案、测试集汇报最终三组，不扩展为大量模型。
 7. **跨时期稳健性测试（约4小时）。** 用第1周完全相同的清洗和聚合规则处理`without_fails_3`；不与1/2号数据重新混合。将主模型直接应用于3号数据，或明确地以3号数据内部按时间切分重新训练后说明这是“跨时期复现”而非“外部零样本测试”。两种设计只能选一种并在`docs/experiment_log.md`写清楚。所有阈值、特征可用性和评估规则保持一致，输出`table_07_robustness_burstgpt3.csv`。
 8. **可选 Azure 扩展（仅主流程稳定时，最多2小时）。** 读取本地 Azure 2024 CSV 的少量必要列，按相同5分钟聚合、切分、基线和主要模型运行；因字段不完全一致，删去不可获得的服务结构特征，并在论文中标注为独立复现实验。不得将它与 BurstGPT 拼接，也不得因其结果差异而修改主实验设计。
@@ -303,9 +302,9 @@
 
 6. **从干净状态复跑关键流程（约3小时）。** 新开 PowerShell 和 Python 内核，删除或移动**仅生成的**`data/processed`、`models`和`outputs`副本到备份位置后，严格按 README 从`01_clean.py`重跑至`07_evaluate.py`。逐项比较重跑表格与已写入论文的结果；如果不同，先检查随机种子、数据版本、包版本和隐式 Notebook 状态。不要删除`Dataset/`中的原始 CSV。
 7. **进行最终质量检查（约1小时）。** 用清单逐项确认：所有图轴有单位；表格有数据集和预测窗口说明；百分比/Token 单位一致；无测试集调参；P95来源于训练集；所有文件名与 README 一致；`git status`中没有意外的大型文件或密钥。为当前代码和文档创建一次有意义的 Git 提交。
-8. **准备10分钟展示（约2小时）。** 用 PowerPoint、Google Slides 或 Canva 制作8–10页：问题与价值、数据、无泄漏流程、模型、主要结果、突发案例、稳健性/局限、结论与下一步。每页只保留一个主要信息，优先复用论文中已编号且经核对的图；演练一次并将讲稿压缩到10分钟以内。
+8. **准备15分钟展示（约2小时）。** 用 PowerPoint、Google Slides 或 Canva 制作8–10页：问题与价值、数据、无泄漏流程、模型、主要结果、突发案例、稳健性/局限、结论与下一步。每页只保留一个主要信息，优先复用论文中已编号且经核对的图；演练一次并将讲稿控制在15分钟以内。
 
-**本周验收与交付：** 论文初稿、最终图表和表格、完整 README、`requirements.txt`、可从干净环境复跑的代码、实验日志和10分钟展示材料。
+**本周验收与交付：** 论文初稿、最终图表和表格、完整 README、`requirements.txt`、可从干净环境复跑的代码、实验日志和15分钟展示材料。
 
 ### 5.8 六周检查点与止损规则
 
@@ -332,8 +331,8 @@
 
 部分研究开始直接关注流量突发与资源配置。AlpaServe利用模型并行与统计复用处理生产环境中的波动请求，并表明合理的模型部署策略能够提升系统可承受的突发程度 [6]。Splitwise进一步指出LLM推理的Prefill和Decode阶段分别呈现计算密集与内存密集特征，因而输入Token和输出Token不应被视为完全相同的资源需求 [7]。DynamoLLM则根据负载变化动态调整LLM推理集群配置，在性能、成本与能源效率之间进行权衡 [9]。这些成果说明，准确获得未来短期Token需求可能为批处理、GPU分配和自动扩缩容提供有价值的先验信息。
 
-真实生产数据的缺乏曾限制相关预测研究。BurstGPT发布了由Microsoft Azure支持的GPT-3.5和GPT-4服务轨迹，包含请求时间、模型类型、输入与输出Token、会话信息及调用方式，并揭示了LLM流量的日周期、周周期、长尾分布与突发现象 [1]。不过，现有代表性研究更多利用此类轨迹开展工作负载刻画或系统回放，对不同预测模型能否提前识别Token负载突发，以及模型在普通时段与峰值时段是否具有不同优势，仍缺少系统比较。
+真实生产数据的缺乏曾限制相关预测研究。BurstGPT发布了由Microsoft Azure支持的ChatGPT和GPT-4服务轨迹，包含请求相对时间、模型类型、输入与输出Token及API/Conversation日志类型；公开批次的字段并不完全一致，1/2号没有Session或响应耗时字段，只有3号额外提供这些字段 [1]。该数据揭示了LLM流量的日周期、周周期、长尾分布与突发现象。不过，现有代表性研究更多利用此类轨迹开展工作负载刻画或系统回放，对不同预测模型能否提前识别Token负载突发，以及模型在普通时段与峰值时段是否具有不同优势，仍缺少系统比较。
 
 基于此，本文利用BurstGPT真实轨迹构建5分钟粒度的Token负载时间序列，并比较XGBoost与LSTM在未来5分钟、15分钟和60分钟预测任务上的表现。XGBoost通过滞后负载、滚动统计、周期信息、模型构成和调用方式等人工特征建立非线性映射；LSTM则从连续历史序列中学习短期与周期性依赖。本文将15分钟作为主要预测窗口，并将超过训练集第95百分位的未来负载定义为突发事件。除MAE、RMSE和sMAPE外，研究还使用Precision、Recall、F1和PR-AUC评价模型对突发事件的识别能力。
 
-本文拟回答三个问题：第一，XGBoost与LSTM中哪一种模型在真实Token负载预测中具有更高的总体精度；第二，平均误差较低的模型是否同样能够更可靠地识别突发；第三，GPT-4占比、API调用比例及近期负载变化等因素如何影响预测结果。研究贡献在于建立一套无时间泄漏且可复现的LLM负载预测流程，将连续负载预测与突发识别纳入统一评价框架，并通过跨时期测试检验结论的稳定性。研究结果可为LLM服务的GPU预留、动态扩缩容和容量规划提供实证依据，同时展示传统机器学习与深度学习模型在真实系统数据上的适用条件和局限性。
+本文拟回答第1.1节冻结的三个问题：第一，5分钟Token负载的时间变化、分布与突发特征；第二，XGBoost与LSTM在5、15、60分钟预测中相对两条朴素基线的误差表现；第三，预测负载识别训练集P95突发的能力及其在3号跨时期批次上的稳健性。研究贡献在于建立一套无时间泄漏且可复现的LLM负载预测流程，将连续负载预测与突发识别纳入统一评价框架，并通过跨时期测试检验结论的稳定性。研究结果可为LLM服务的GPU预留、动态扩缩容和容量规划提供实证依据，同时展示传统机器学习与深度学习模型在真实系统数据上的适用条件和局限性。

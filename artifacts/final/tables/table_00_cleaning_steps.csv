@@ -1,0 +1,4 @@
+file_id,raw_rows,deleted_unparseable_timestamp,deleted_non_numeric_tokens,deleted_negative_tokens,deleted_critical_missing,deleted_duplicates,clean_rows
+without_fails_1,1404294,0.0,0.0,0.0,0.0,40910.0,1363384.0
+without_fails_2,3784213,0.0,0.0,0.0,0.0,88687.0,3695526.0
+without_fails_3,4956058,0.0,0.0,0.0,0.0,150523.0,4805535.0

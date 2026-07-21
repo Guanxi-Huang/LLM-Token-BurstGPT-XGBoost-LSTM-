@@ -1,0 +1,90 @@
+horizon_minutes: 5
+target_column: target_h5
+feature_source: data/processed/features_h5_{split}.parquet
+features:
+- lag_1
+- lag_2
+- lag_3
+- lag_6
+- lag_12
+- lag_24
+- lag_48
+- lag_288
+- rolling_mean_3
+- rolling_std_3
+- rolling_max_3
+- rolling_mean_6
+- rolling_std_6
+- rolling_max_6
+- rolling_mean_12
+- rolling_std_12
+- rolling_max_12
+- request_count_rolling_mean_3
+- gpt4_share_history_3
+- api_share_history_3
+- mean_request_tokens_history_3
+- mean_response_tokens_history_3
+- request_count_rolling_mean_6
+- gpt4_share_history_6
+- api_share_history_6
+- mean_request_tokens_history_6
+- mean_response_tokens_history_6
+- request_count_rolling_mean_12
+- gpt4_share_history_12
+- api_share_history_12
+- mean_request_tokens_history_12
+- mean_response_tokens_history_12
+- relative_day_sin
+- relative_day_cos
+- relative_week_sin
+- relative_week_cos
+fixed_params:
+  objective: reg:squarederror
+  random_state: 42
+  n_jobs: -1
+selected_params:
+  max_depth: 7
+  learning_rate: 0.05
+  n_estimators: 600
+  min_child_weight: 5
+  subsample: 0.9
+  colsample_bytree: 0.7
+selection:
+  data: validation only; test file unopened during selection
+  primary_metric: MAE
+  valid_mae: 16491.301489745725
+  valid_f1: 0.7835820895522387
+  rule: minimum validation MAE; ties prefer lower max_depth then fewer trees
+  candidate_index: 2
+  bounded_search_space:
+    max_depth:
+    - 3
+    - 5
+    - 7
+    learning_rate:
+    - 0.02
+    - 0.05
+    - 0.1
+    n_estimators:
+    - 300
+    - 600
+    - 1000
+    min_child_weight:
+    - 1
+    - 5
+    - 10
+    subsample:
+    - 0.7
+    - 0.9
+    - 1.0
+    colsample_bytree:
+    - 0.7
+    - 0.9
+    - 1.0
+  sampled_candidates: 12
+fit_rows:
+  train: 24104
+  validation: 5227
+final_refit: train + validation; no standardization
+test_policy: predict once after all horizons are frozen; never tune on test
+seed: 42

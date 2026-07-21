@@ -1,0 +1,4 @@
+window_start_synthetic_utc,window_end_exclusive_synthetic_utc,raw_token_load,series_token_load,raw_request_count,series_request_count,raw_mean_request_tokens,series_mean_request_tokens,raw_mean_response_tokens,series_mean_response_tokens,raw_gpt4_request_count,series_gpt4_request_count,raw_api_request_count,series_api_request_count,all_metrics_match
+1970-01-11T19:10:00+00:00,1970-01-11T19:15:00+00:00,4838,4838,4,4,895.5,895.5,314.0,314.0,2,2,0,0,True
+1970-03-21T04:50:00+00:00,1970-03-21T04:55:00+00:00,140580,140580,557,557,244.15260323159785,244.15260323159785,8.235188509874327,8.235188509874327,0,0,556,556,True
+1970-04-04T15:30:00+00:00,1970-04-04T15:35:00+00:00,14644,14644,8,8,1675.0,1675.0,155.5,155.5,1,1,0,0,True
