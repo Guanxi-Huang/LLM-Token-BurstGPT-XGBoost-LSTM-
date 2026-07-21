@@ -1,0 +1,16 @@
+# Direct, version-pinned project dependencies for Python 3.12 on Windows.
+# Transitive dependencies are resolved by pip at installation time.
+pandas==3.0.1
+numpy==2.3.5
+matplotlib==3.11.1
+seaborn==0.13.2
+scikit-learn==1.9.0
+xgboost==3.3.0
+tensorflow==2.20.0
+shap==0.52.0
+scipy==1.18.0
+statsmodels==0.14.6
+ipykernel==7.3.0
+joblib==1.5.3
+PyYAML==6.0.3
+pyarrow==25.0.0

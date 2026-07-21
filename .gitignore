@@ -1,0 +1,24 @@
+# Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local data and generated experiment artefacts
+Dataset/*.csv
+Dataset/*.csv.gz
+Dataset/*.zip
+data/processed/
+models/
+outputs/
+
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+~$*.docx
+
+# Never commit credentials or local configuration
+.env
+*.pem
+*.key

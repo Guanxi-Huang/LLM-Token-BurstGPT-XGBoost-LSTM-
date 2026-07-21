@@ -1,0 +1,29 @@
+# Shared, version-controlled defaults for all experiments.
+project:
+  seed: 42
+  timezone: "UTC"
+
+data:
+  raw_dir: "Dataset"
+  processed_dir: "data/processed"
+  primary_files:
+    - "level_5_BurstGPT_v2.0_without_fails_1_Undisclosed_GitHub.csv"
+    - "level_5_BurstGPT_v2.0_without_fails_2_Undisclosed_GitHub.csv"
+  robustness_file: "level_5_BurstGPT_v2.0_without_fails_3_Undisclosed_GitHub.csv"
+
+series:
+  frequency: "5min"
+  horizons_minutes: [5, 15, 60]
+
+split:
+  train: 0.70
+  validation: 0.15
+  test: 0.15
+
+burst:
+  train_quantile: 0.95
+
+paths:
+  models: "models"
+  figures: "outputs/figures"
+  tables: "outputs/tables"

@@ -1,0 +1,15 @@
+# Direct project dependencies. requirements.txt is the pinned environment snapshot.
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+xgboost
+tensorflow
+shap
+scipy
+statsmodels
+ipykernel
+joblib
+pyyaml
+pyarrow
