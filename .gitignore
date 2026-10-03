@@ -4,19 +4,68 @@ __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
 
-# Local data and generated experiment artefacts
+# Local IDE, agent, and assistant workspaces
+.idea/
+.agents/
+.codex/
+.claude/
+.cursor/
+skill_staging/
+process_archive/
+
+# Local data, trained models, and generated experiment artefacts
 Dataset/*.csv
 Dataset/*.csv.gz
 Dataset/*.zip
-data/processed/
+data/
+artifacts/
 models/
 outputs/
+tmp/
+reproducibility_backups/
+
+# Generated notebooks and execution state
+notebooks/
+
+# Document editing and formatting workspaces
+docx_revision_work/
+ieee_reformat_work/
+
+# Local deliverables and downloaded research material
+deliverables/
+literature/
+*.docx
+*.pptx
+*.pdf
+
+# Internal process records and generated documentation
+configs/week6_log_record.json
+docs/environment_status.md
+docs/experiment_log.md
+docs/final_quality_check.md
+docs/literature_matrix.md
+docs/reproducibility_report.md
+docs/results_discussion_preliminary.md
+docs/w*_visualization_catalog.md
+scripts/append_preliminary_results_to_docx.py
+scripts/build_paper.py
+scripts/build_presentation.mjs
+scripts/inspect_week6_paper.py
+scripts/match_embedded_figures.py
+scripts/package_final_artifacts.py
+scripts/render_docx_with_word.ps1
+scripts/revise_week6_feedback_paper.py
+scripts/update_research_logs.py
+
+# Preserved Chinese and bilingual source versions
+*（*）.*
 
 # Operating-system and editor files
 .DS_Store
 Thumbs.db
 .vscode/
 ~$*.docx
+node.*.log
 
 # Never commit credentials or local configuration
 .env

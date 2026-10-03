@@ -10,6 +10,10 @@ shap
 scipy
 statsmodels
 ipykernel
+nbformat
+nbclient
 joblib
 pyyaml
 pyarrow
+python-docx
+Pillow

@@ -1,0 +1,96 @@
+horizon_minutes: 15
+horizon_steps: 3
+frequency_minutes: 5
+target_column: target_h15
+target_definition: token_load at t+15 minutes
+split_source: data/processed/features_h15_{split}.parquet
+split_assignment_basis: target_time; identical target rows to XGBoost
+temporal_contract:
+  forecast_origin: feature_time t
+  latest_input_window: t-5 minutes (window fully completed before t)
+  target_time: t+15 minutes
+feature_set: main
+features:
+- token_load
+- request_count
+- mean_request_tokens
+- mean_response_tokens
+- gpt4_share
+- api_share
+- relative_day_sin
+- relative_day_cos
+- relative_week_sin
+- relative_week_cos
+lookback: 144
+network:
+  layers:
+  - type: Input
+    shape:
+    - 144
+    - 10
+  - type: LSTM
+    units: 32
+    dropout: 0.1
+  - type: Dense
+    units: 1
+  parameter_count: 5537
+  optimizer: adam
+  loss: mae
+  metrics:
+  - rmse
+training:
+  max_epochs: 100
+  batch_size: 64
+  shuffle: false
+  early_stopping:
+    monitor: val_loss
+    patience: 10
+    restore_best_weights: true
+  checkpoint: models/lstm_h15.keras
+  best_epoch: 45
+  final_refit: train + validation sequences for fixed best_epoch
+scaling:
+  feature_scaler: StandardScaler
+  feature_fit: unique input rows used by training sequences only
+  feature_fit_rows: 24245
+  target_scaler: StandardScaler
+  target_fit: training labels only
+  feature_scaler_path: models/lstm_feature_scaler_h15.joblib
+  target_scaler_path: models/lstm_target_scaler_h15.joblib
+selection:
+  data: validation only; test split unopened until this config was written
+  primary_metric: MAE in original Token units
+  secondary_metric: burst F1 using training-set P95 threshold
+  rule: minimum validation MAE; ties prefer higher F1 then smaller network
+  formal_runs: 1
+  maximum_formal_runs: 4
+  selected_candidate_index: 1
+  train_mae_tokens: 35363.53306633656
+  valid_mae_tokens: 24862.829183207385
+  valid_f1: 0.40343347639484983
+  seasonal_naive_valid_mae_tokens: 54035.30591161278
+  outperformed_seasonal_naive: true
+  persistent_generalization_gap: false
+  stability_action: no intervention required
+  bounded_candidates:
+  - units: 32
+    lookback: 144
+    dropout: 0.1
+fit_rows:
+  train: 24102
+  validation: 5227
+prediction_policy:
+  inverse_transform: target scaler
+  negative_predictions: clip to zero
+  burst_threshold: training token_load P95
+  test: one predict call after validation configuration freeze
+random_seeds:
+  python: 42
+  numpy: 42
+  tensorflow: 42
+  python_hash_seed: 42
+forbidden_architectures:
+- Transformer
+- Attention
+- CNN
+- stacked LSTM
