@@ -1,3 +1,0 @@
-horizon_minutes,comparison_split,xgboost_mae,baseline,baseline_mae,mae_improvement,mae_improvement_percent,xgboost_better,interpretation
-15,test (reported once; not used for tuning),16464.423880051727,persistence,12342.419280795715,-4122.004599256012,-33.397055354209826,False,XGBoost did not outperform; retained as a valid research result
-15,test (reported once; not used for tuning),16464.423880051727,seasonal_naive,15770.347360367254,-694.0765196844732,-4.401149219000525,False,XGBoost did not outperform; retained as a valid research result

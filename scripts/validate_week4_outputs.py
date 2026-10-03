@@ -8,6 +8,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import yaml
+from PIL import Image
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -160,12 +161,25 @@ def validate_predictions_and_metrics() -> None:
         np.testing.assert_array_equal(prediction["predicted_burst"].astype(bool), predicted >= threshold)
 
 
+def validate_training_figures() -> None:
+    source = (ROOT / "src" / "06_lstm.py").read_text(encoding="utf-8")
+    for prohibited in ("plt.title(", ".set_title(", ".suptitle(", "fig.text("):
+        assert prohibited not in source, f"Prohibited title API found: {prohibited}"
+    for horizon in HORIZONS:
+        path = require(ROOT / "outputs" / "figures" / f"fig_lstm_training_h{horizon}.png")
+        with Image.open(path) as image:
+            assert image.width >= 2000 and image.height >= 1200
+            dpi = image.info.get("dpi")
+            assert dpi is not None and min(dpi) >= 299.0, (horizon, dpi)
+
+
 def main() -> None:
     validate_configs_and_models()
     validate_selection_and_histories()
     validate_sequence_audits()
     validate_predictions_and_metrics()
-    print("Week-4 validation passed: configs, scalers, histories, temporal audits, predictions, and metrics are internally consistent.")
+    validate_training_figures()
+    print("Week-4 validation passed: configs, scalers, histories, temporal audits, predictions, metrics, and title-free 300-DPI figures are internally consistent.")
 
 
 if __name__ == "__main__":

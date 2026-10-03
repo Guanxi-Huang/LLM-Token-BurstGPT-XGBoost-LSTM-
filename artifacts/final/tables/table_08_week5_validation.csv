@@ -1,9 +1,0 @@
-check,status,evidence
-unified_prediction_grain_and_labels,passed,62736 rows; 4 models per timestamp+horizon
-independent_main_metric_recalculation,passed,MAE/RMSE/sMAPE/Precision/Recall/F1/AP/confusion counts agree
-main_and_appendix_horizon_separation,passed,h15 in main tables; h5/h60 in appendix tables
-predefined_segment_scope_and_leakage_note,passed,exactly five dimensions; composition marked diagnostic-only
-minimal_ablation_boundary,passed,3 fixed sets; validation chose full; only 2 new test calls
-burstgpt3_zero_shot_design,passed,12 model-horizon rows; 0 batch-3 fit/selection rows; main P95 retained
-figure_render_integrity,passed,8 readable high-resolution PNGs
-experiment_log_freeze_and_test_use,passed,"freeze, test-use count, figure conclusions, and robustness design recorded"

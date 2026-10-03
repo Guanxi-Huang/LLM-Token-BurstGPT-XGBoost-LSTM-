@@ -1,2 +1,0 @@
-previous_batch,next_batch,previous_batch_last_request,next_batch_first_request,request_gap_seconds,previous_batch_last_window,next_batch_first_window,complete_windows_between,zero_windows_between
-1,2,1970-03-02T23:52:53+00:00,1970-03-03T00:00:14+00:00,441.0,1970-03-02T23:50:00+00:00,1970-03-03T00:00:00+00:00,1,1

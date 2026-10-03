@@ -1,8 +1,0 @@
-horizon_minutes,stage,n_predictions,n_unique_predictions,is_constant,negative_prediction_count,min_prediction,max_prediction,target_time_aligned
-15,default_valid,5227,4397,False,604,-25205.556640625,542863.25,True
-5,selected_valid,5227,4865,False,448,-18934.642578125,505732.9375,True
-15,selected_valid,5227,4664,False,321,-2205.396240234375,508038.90625,True
-60,selected_valid,5227,5036,False,301,-10643.4580078125,449506.0,True
-5,final_test,5228,4747,False,801,-5654.25634765625,352698.5,True
-15,final_test,5228,4410,False,618,-8538.0654296875,369267.40625,True
-60,final_test,5228,4834,False,664,-17405.412109375,418658.84375,True

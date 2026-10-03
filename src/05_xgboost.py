@@ -25,6 +25,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 import numpy as np
 import pandas as pd
 import yaml
@@ -341,12 +342,11 @@ def save_native_importance(
     fig, ax = plt.subplots(figsize=(8.5, 6.2))
     ax.barh(shown["feature"], shown["importance"], color="#31688E")
     ax.set_xlabel("XGBoost feature importance")
-    ax.set_title(f"Native feature importance — {horizon}-minute forecast", loc="left")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
     fig.savefig(
         project_path("outputs", "figures", f"fig_xgb_feature_importance_h{horizon}.png"),
-        dpi=180,
+        dpi=300,
         bbox_inches="tight",
         facecolor="white",
     )
@@ -390,11 +390,13 @@ def save_shap_outputs(
 
     shap.summary_plot(values_array, sample, max_display=20, show=False)
     figure = plt.gcf()
-    figure.suptitle(f"SHAP summary — {horizon}-minute forecast", x=0.02, ha="left")
+    figure.axes[0].xaxis.set_major_formatter(
+        FuncFormatter(lambda value, _: f"{value / 1000:g}k" if abs(value) >= 1000 else f"{value:g}")
+    )
     figure.tight_layout()
     figure.savefig(
         project_path("outputs", "figures", f"fig_xgb_shap_summary_h{horizon}.png"),
-        dpi=180,
+        dpi=300,
         bbox_inches="tight",
         facecolor="white",
     )
@@ -409,15 +411,12 @@ def save_shap_outputs(
             show=False,
         )
         figure = plt.gcf()
-        figure.suptitle(
-            f"SHAP dependence #{rank}: {feature} — h{horizon}", x=0.02, ha="left"
-        )
         figure.tight_layout()
         figure.savefig(
             project_path(
                 "outputs", "figures", f"fig_xgb_shap_dependence_h{horizon}_{rank}_{feature}.png"
             ),
-            dpi=180,
+            dpi=300,
             bbox_inches="tight",
             facecolor="white",
         )

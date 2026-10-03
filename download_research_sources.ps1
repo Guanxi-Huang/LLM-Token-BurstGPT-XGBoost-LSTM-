@@ -5,7 +5,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $projectRoot = $PSScriptRoot
-$literatureDir = Join-Path $projectRoot ([string]([char]0x6587) + [char]0x732E)
+$literatureDir = Join-Path $projectRoot 'references'
 $datasetDir = Join-Path $projectRoot 'Dataset'
 New-Item -ItemType Directory -Force -Path $literatureDir, $datasetDir | Out-Null
 

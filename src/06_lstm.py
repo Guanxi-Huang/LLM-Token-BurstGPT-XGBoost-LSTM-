@@ -720,14 +720,13 @@ def save_training_history(
         textcoords="offset points",
         color="#333333",
     )
-    ax.set_title(f"LSTM training and validation loss — {horizon}-minute forecast", loc="left")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("MAE (training-target standard deviations)")
     ax.grid(axis="y", color="#D9D9D9", linewidth=0.7, alpha=0.7)
     ax.legend(frameon=False, loc="best")
     ax.spines[["top", "right"]].set_visible(False)
     fig.tight_layout()
-    fig.savefig(figure_path, dpi=180, bbox_inches="tight", facecolor="white")
+    fig.savefig(figure_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return table_path, figure_path
 
@@ -1274,6 +1273,103 @@ def run_horizons(horizons: list[int], max_runs: int, feature_set: str) -> None:
     print(pd.DataFrame(metric_rows).to_string(index=False))
 
 
+def finalize_frozen_horizons(horizons: list[int], feature_set: str) -> None:
+    ensure_output_directories()
+    set_global_seed(SEED)
+    tf = import_tensorflow()
+    threshold = load_threshold()
+    feature_names = feature_names_for(feature_set)
+    suffix = artifact_suffix(feature_set)
+    metric_rows: list[dict[str, Any]] = []
+    audit_rows: list[dict[str, Any]] = []
+    manual_rows: list[dict[str, Any]] = []
+    for horizon in horizons:
+        config_path = project_path("configs", f"lstm_h{horizon}{suffix}.yaml")
+        with config_path.open(encoding="utf-8") as handle:
+            config = yaml.safe_load(handle)
+        selected = config["selection"]
+        network = config["network"]
+        selection = SelectionResult(
+            spec={
+                "units": int(network["layers"][1]["units"]),
+                "lookback": int(config["lookback"]),
+                "dropout": float(network["layers"][1]["dropout"]),
+            },
+            best_epoch=int(config["training"]["best_epoch"]),
+            history={},
+            tuning=pd.DataFrame(),
+            parameter_count=int(network["parameter_count"]),
+            train_mae=float(selected["train_mae_tokens"]),
+            valid_mae=float(selected["valid_mae_tokens"]),
+            valid_f1=float(selected["valid_f1"]),
+            persistent_generalization_gap=bool(selected["persistent_generalization_gap"]),
+        )
+        train_anchor = load_split_anchor(horizon, "train")
+        valid_anchor = load_split_anchor(horizon, "valid")
+        test_anchor = load_split_anchor(horizon, "test")
+        full_series = load_series_through(test_anchor["target_time"].iloc[-1])
+        feature_frame = build_lstm_features(full_series)
+        feature_scaler = joblib.load(
+            project_path("models", f"lstm_feature_scaler_h{horizon}{suffix}.joblib")
+        )
+        target_scaler = joblib.load(
+            project_path("models", f"lstm_target_scaler_h{horizon}{suffix}.joblib")
+        )
+        train_set = prepare_sequence_set(
+            feature_frame,
+            train_anchor,
+            "train",
+            feature_names,
+            int(selection.spec["lookback"]),
+            validate_horizon(horizon),
+            feature_scaler,
+            target_scaler,
+            fit_scalers=False,
+        )
+        valid_set = prepare_sequence_set(
+            feature_frame,
+            valid_anchor,
+            "valid",
+            feature_names,
+            int(selection.spec["lookback"]),
+            validate_horizon(horizon),
+            feature_scaler,
+            target_scaler,
+            fit_scalers=False,
+        )
+        model = tf.keras.models.load_model(
+            project_path("models", f"lstm_h{horizon}{suffix}.keras")
+        )
+        if int(model.count_params()) != selection.parameter_count:
+            raise AssertionError("Frozen model parameter count differs from YAML")
+        save_model_summary(model, horizon, feature_set)
+        test_set, metrics = final_test_once(
+            model,
+            horizon,
+            feature_frame,
+            test_anchor,
+            feature_names,
+            selection,
+            feature_scaler,
+            target_scaler,
+            threshold,
+            feature_set,
+        )
+        metric_rows.append(metrics)
+        sets = [train_set, valid_set, test_set]
+        for sequence_set in sets:
+            audit_rows.extend(sequence_audit_rows(horizon, sequence_set))
+            manual_rows.append(manual_sequence_check_row(horizon, sequence_set))
+        print_sequence_evidence(horizon, sets)
+    _merge_rows(
+        project_path("outputs", "tables", f"table_05_lstm_results{suffix}.csv"),
+        metric_rows,
+        ["horizon_minutes", "split", "model"],
+    )
+    save_audits(audit_rows, manual_rows, feature_set)
+    print(pd.DataFrame(metric_rows).to_string(index=False))
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -1295,6 +1391,7 @@ def parse_args() -> argparse.Namespace:
         default="main",
         help="Main 10-variable input or token_load-only ablation",
     )
+    parser.add_argument("--finalize-frozen", action="store_true")
     return parser.parse_args()
 
 
@@ -1307,7 +1404,10 @@ def main() -> None:
     for horizon in horizons:
         validate_horizon(horizon)
     candidate_specs(args.max_runs)
-    run_horizons(horizons, args.max_runs, args.feature_set)
+    if args.finalize_frozen:
+        finalize_frozen_horizons(horizons, args.feature_set)
+    else:
+        run_horizons(horizons, args.max_runs, args.feature_set)
 
 
 if __name__ == "__main__":

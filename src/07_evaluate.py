@@ -564,11 +564,6 @@ def _style_axis(axis: plt.Axes, *, grid: bool = True) -> None:
         axis.set_axisbelow(True)
 
 
-def _figure_header(fig: plt.Figure, title: str, subtitle: str) -> None:
-    fig.suptitle(title, x=0.075, y=0.985, ha="left", fontsize=15, fontweight="bold", color=INK)
-    fig.text(0.075, 0.935, subtitle, ha="left", va="top", fontsize=9, color=MUTED)
-
-
 def _token_formatter(value: float, _position: int) -> str:
     magnitude = abs(value)
     if magnitude >= 1_000_000:
@@ -627,13 +622,8 @@ def plot_test_week(predictions: pd.DataFrame, output_path: Path) -> tuple[pd.Tim
     ax.xaxis.set_major_locator(mdates.DayLocator())
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d", tz=start.tz))
     ax.legend(ncol=4, loc="upper center", bbox_to_anchor=(0.5, -0.13), frameon=False)
-    _figure_header(
-        fig,
-        "Actual and 15-minute-ahead forecasts in a representative test week",
-        f"Median-total complete seven-day window: {start:%Y-%m-%d} to {(end - pd.Timedelta(minutes=5)):%Y-%m-%d}; Token/5-min",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.88, bottom=0.20)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.20)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return start, end
 
@@ -687,13 +677,8 @@ def plot_burst_zoom(
     ax.xaxis.set_major_locator(mdates.HourLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter("%b %d\n%H:%M", tz=center.tz))
     ax.legend(ncol=5, loc="upper center", bbox_to_anchor=(0.5, -0.15), frameon=False)
-    _figure_header(
-        fig,
-        "Forecast behavior around the largest test burst",
-        f"Objective selection rule: maximum actual test load at {center.isoformat()}; fixed train-only P95 shown",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.88, bottom=0.22)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.22)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return center
 
@@ -703,14 +688,13 @@ def plot_metric_bars(metrics: pd.DataFrame, output_path: Path) -> None:
     positions = np.arange(len(MODEL_ORDER))
     colors = [MODEL_COLORS[model] for model in MODEL_ORDER]
     fig, axes = plt.subplots(1, 2, figsize=(12.8, 5.8))
-    for axis, column, title, ylabel in (
-        (axes[0], "mae", "Overall forecast error", "MAE (Token/5-min)"),
-        (axes[1], "f1", "Fixed-P95 burst detection", "F1"),
+    for axis, column, ylabel in (
+        (axes[0], "mae", "MAE (Token/5-min)"),
+        (axes[1], "f1", "Fixed-P95 burst F1"),
     ):
         values = main[column].to_numpy(dtype="float64")
         bars = axis.bar(positions, values, color=colors, edgecolor=INK, linewidth=0.5)
         axis.set_xticks(positions, MODEL_ORDER, rotation=18, ha="right")
-        axis.set_title(title, loc="left", fontsize=11, fontweight="bold", color=INK)
         axis.set_ylabel(ylabel)
         axis.set_ylim(bottom=0)
         _style_axis(axis)
@@ -736,13 +720,8 @@ def plot_metric_bars(metrics: pd.DataFrame, output_path: Path) -> None:
             color=MUTED,
             fontsize=10,
         )
-    _figure_header(
-        fig,
-        "15-minute forecast accuracy and burst-detection performance",
-        "Same 5,228 test target windows and fixed train P95; lower MAE and higher F1 are better",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.84, bottom=0.20, wspace=0.28)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.20, wspace=0.28)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -786,13 +765,8 @@ def plot_pr_curves(predictions: pd.DataFrame, metrics: pd.DataFrame, output_path
     ax.set_ylabel("Precision")
     _style_axis(ax)
     ax.legend(loc="upper right", frameon=False, fontsize=8.5)
-    _figure_header(
-        fig,
-        "Precision–recall curves for 15-minute fixed-P95 burst detection",
-        "Five positive windows among 5,228 test targets; PR-AUC is reported as average precision",
-    )
-    fig.subplots_adjust(left=0.12, right=0.98, top=0.86, bottom=0.12)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.97, bottom=0.12)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -828,22 +802,16 @@ def plot_confusion_matrices(predictions: pd.DataFrame, output_path: Path) -> Non
                     color=color,
                     fontsize=10,
                 )
-        axis.set_title(model, fontsize=11, fontweight="bold", color=INK)
         axis.set_xticks([0, 1], ["Non-burst", "Burst"])
         axis.set_yticks([0, 1], ["Non-burst", "Burst"])
-        axis.set_xlabel("Predicted label")
+        axis.set_xlabel(f"Predicted label - {model}")
     axes[0].set_ylabel("Actual label")
     if image is not None:
         colorbar_axis = fig.add_axes([0.925, 0.18, 0.015, 0.56])
         colorbar = fig.colorbar(image, cax=colorbar_axis)
         colorbar.set_label("Row-normalized share")
-    _figure_header(
-        fig,
-        "Burst confusion matrices for the three principal 15-minute comparators",
-        "Cells show raw count and within-actual-class percentage; fixed train P95 = 315,246 Token/5-min",
-    )
-    fig.subplots_adjust(left=0.075, right=0.89, top=0.78, bottom=0.16, wspace=0.25)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.89, top=0.96, bottom=0.18, wspace=0.25)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -864,7 +832,7 @@ def plot_segment_burst(segment: pd.DataFrame, output_path: Path) -> None:
             linewidth=0.5,
         )
         axis.set_xticks(np.arange(len(MODEL_ORDER)), MODEL_ORDER, rotation=18, ha="right")
-        axis.set_title(f"Actual {label.lower()} windows", loc="left", fontweight="bold", color=INK)
+        axis.set_xlabel(f"Actual {label.lower()} windows")
         axis.set_ylabel("MAE (Token/5-min)")
         axis.set_ylim(bottom=0)
         axis.yaxis.set_major_formatter(mticker.FuncFormatter(_token_formatter))
@@ -878,13 +846,8 @@ def plot_segment_burst(segment: pd.DataFrame, output_path: Path) -> None:
                 va="bottom",
                 fontsize=7.5,
             )
-    _figure_header(
-        fig,
-        "15-minute forecast error in non-burst and burst target windows",
-        "Panels use separate, explicitly labeled zero-based scales because burst-window errors are much larger",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.82, bottom=0.20, wspace=0.27)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.20, wspace=0.27)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -917,20 +880,15 @@ def plot_segment_phases(segment: pd.DataFrame, output_path: Path) -> None:
                 label=model,
             )
         axis.set_xticks(np.arange(len(order)), order, rotation=25, ha="right")
-        axis.set_title(title, loc="left", fontweight="bold", color=INK, fontsize=10.5)
+        axis.set_xlabel(title)
         axis.set_ylabel("MAE (Token/5-min)")
         axis.set_ylim(bottom=0)
         axis.yaxis.set_major_formatter(mticker.FuncFormatter(_token_formatter))
         _style_axis(axis)
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, ncol=4, loc="lower center", frameon=False)
-    _figure_header(
-        fig,
-        "15-minute forecast error by relative temporal phase",
-        "Phases derive from published relative seconds; they are not real dates, weekdays, or weekends",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.82, bottom=0.27, wspace=0.28)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.27, wspace=0.28)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -976,25 +934,14 @@ def plot_segment_composition(
                         fontsize=6.8,
                     )
         axis.set_xticks(positions, MODEL_ORDER, rotation=18, ha="right")
-        axis.set_title(
-            f"{title} (train median={thresholds[cutoff_key]:.3f})",
-            loc="left",
-            fontweight="bold",
-            color=INK,
-            fontsize=10.5,
-        )
+        axis.set_xlabel(f"{title} group (train median={thresholds[cutoff_key]:.3f})")
         axis.set_ylabel("MAE (Token/5-min)")
         axis.set_ylim(bottom=0)
         axis.yaxis.set_major_formatter(mticker.FuncFormatter(_token_formatter))
         _style_axis(axis)
         axis.legend(frameon=False, title="Target-time group", fontsize=8)
-    _figure_header(
-        fig,
-        "15-minute forecast error by observed target-time service composition",
-        "High/low cutoffs use train nonzero-window medians; grouping is diagnostic only and zero-request windows are excluded",
-    )
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.82, bottom=0.21, wspace=0.28)
-    fig.savefig(output_path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.23, wspace=0.28)
+    fig.savefig(output_path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
 
 
@@ -1075,49 +1022,49 @@ def _legacy_update_experiment_log_unused(
     block = "\n".join(
         [
             marker_start,
-            "## 第5周：最终版本冻结、统一测试评价与图表结论",
+            "## Week 5: Final freeze, unified test evaluation, and figure conclusions",
             "",
-            "- 冻结日期：2026-07-21；随机种子：42；主任务：未来15分钟；附录任务：未来5/60分钟。",
-            "- 冻结规则：第3周XGBoost和第4周LSTM的配置均仅由验证集选定；本节以后主测试集只用于一次性预测产物的汇总、指标、图表和论文报告，不据此修改参数、特征、阈值或模型。",
-            "- 统一测试集：`data/processed/features_h{5,15,60}_test.parquet`，每个预测窗口5,228个相同目标时点；训练集P95固定为 `315246.2` Token/5min，标签规则始终为 `token_load >= threshold`。",
-            "- 基线冻结：在预测原点 t，Persistence 使用最后完整窗口 `y[t-5min]`，Seasonal Naive 使用目标时刻前24小时窗口；文件 `outputs/tables/pred_baselines_test.csv`。",
-            "- XGBoost冻结：配置 `configs/xgb_h5.yaml`、`xgb_h15.yaml`、`xgb_h60.yaml`；模型 `models/xgb_h5.joblib`、`xgb_h15.joblib`、`xgb_h60.joblib`；预测 `pred_xgb_test_h{5,15,60}.csv`。",
-            "- LSTM冻结：配置 `configs/lstm_h5.yaml`、`lstm_h15.yaml`、`lstm_h60.yaml`；模型 `models/lstm_h{5,15,60}.keras`，对应feature/target scaler；预测 `pred_lstm_test_h{5,15,60}.csv`。",
-            "- 对齐审计：统一长表共有 " + f"{len(predictions):,}" + " 行；每个 `timestamp+horizon` 正好4种方法，真实值与实际突发标签完全一致，无缺失或重复键。",
-            "- 置信信息：按合成UTC日历日整块重采样的95% percentile Bootstrap；"
-            + f"seed=42，{bootstrap_replicates:,}次重复。该方法保留日内相关性；测试期仅5个突发窗，突发置信区间仍应谨慎解释。",
+            "- Freeze date: 2026-07-21; random seed: 42; primary task: 15 minutes ahead; supporting tasks: 5 and 60 minutes ahead.",
+            "- Freeze rule: Week 3 XGBoost and Week 4 LSTM configurations were selected only with validation data. The primary test set is now limited to one-time prediction summaries, metrics, figures, and paper reporting. It cannot change parameters, features, thresholds, or models.",
+            "- Unified test set: `data/processed/features_h{5,15,60}_test.parquet`, with the same 5,228 target times per horizon. The training P95 is fixed at `315246.2` Token/5min, and labels always use `token_load >= threshold`.",
+            "- Frozen baselines: at forecast origin t, Persistence uses the last complete window `y[t-5min]`, while Seasonal Naive uses the window 24 hours before the target; file: `outputs/tables/pred_baselines_test.csv`.",
+            "- Frozen XGBoost: configurations `configs/xgb_h5.yaml`, `xgb_h15.yaml`, and `xgb_h60.yaml`; models `models/xgb_h5.joblib`, `xgb_h15.joblib`, and `xgb_h60.joblib`; predictions `pred_xgb_test_h{5,15,60}.csv`.",
+            "- Frozen LSTM: configurations `configs/lstm_h5.yaml`, `lstm_h15.yaml`, and `lstm_h60.yaml`; models `models/lstm_h{5,15,60}.keras` with corresponding feature and target scalers; predictions `pred_lstm_test_h{5,15,60}.csv`.",
+            "- Alignment audit: the unified long table has " + f"{len(predictions):,}" + " rows. Every `timestamp+horizon` has exactly four methods, identical actual values and burst labels, and no missing or duplicate keys.",
+            "- Confidence information: 95% percentile bootstrap using complete synthetic UTC calendar-day blocks, "
+            + f"seed 42, and {bootstrap_replicates:,} replicates. This preserves within-day dependence. The test period has only five burst windows, so burst confidence intervals require caution.",
             "",
-            "### 15分钟主结果（3位有效数字）",
+            "### Primary 15-minute results (three significant digits)",
             "",
             *metric_lines,
             "",
-            f"总体结论：{mae_winner} 的15分钟MAE最低（{_sig(main.loc[mae_winner, 'mae'])} Token/5min）；"
-            f"相对Seasonal Naive的改善率为 {_sig(main.loc[mae_winner, 'mae_improvement_vs_seasonal_percent'])}%。"
-            "测试期5个真实突发均未被任何方法在固定阈值下命中，因此四种方法F1均为0；"
-            f"{ap_winner} 的PR-AUC/AP最高（{_sig(main.loc[ap_winner, 'pr_auc'])}），但不能替代阈值下的零命中事实。",
+            f"Overall conclusion: {mae_winner} has the lowest 15-minute MAE ({_sig(main.loc[mae_winner, 'mae'])} Token/5min), "
+            f"an improvement of {_sig(main.loc[mae_winner, 'mae_improvement_vs_seasonal_percent'])}% over Seasonal Naive. "
+            "No method detects any of the five true test bursts at the fixed threshold, so all four methods have F1=0. "
+            f"{ap_winner} has the highest PR-AUC/AP ({_sig(main.loc[ap_winner, 'pr_auc'])}), but that ranking does not change the zero-hit threshold result.",
             "",
-            "### 预定义分组规则",
+            "### Predefined grouping rules",
             "",
-            "- 相对日内时段按相对秒数划分为00–06h、06–12h、12–18h、18–24h；相对周内相位分为7个连续24小时相位，均不解释为真实星期或周末。",
-            f"- GPT-4占比高/低阈值为训练期非零请求窗中位数 {_sig(thresholds['gpt4_share_train_median'])}；API占比阈值为 {_sig(thresholds['api_share_train_median'])}。零请求窗不具有服务构成，故从这两项构成分组中排除。",
-            "- 目标时点GPT-4/API构成只用于事后解释对应时段误差，没有作为未来预测特征；模型输入仍只使用预测时点可得的历史构成。",
+            "- Relative time-of-day groups are 00-06h, 06-12h, 12-18h, and 18-24h based on relative seconds. Relative week phase uses seven consecutive 24-hour phases. Neither grouping represents real weekdays or weekends.",
+            f"- The high/low GPT-4 share threshold is the median among non-empty training windows, {_sig(thresholds['gpt4_share_train_median'])}; the API share threshold is {_sig(thresholds['api_share_train_median'])}. Zero-request windows have no service composition and are excluded from these groups.",
+            "- Target-time GPT-4/API composition is used only for retrospective error interpretation. It is not a future prediction feature, and model inputs use only historical composition available at forecast time.",
             "",
-            "### 图下注释（每图一句结论）",
+            "### Figure notes",
             "",
-            f"- 图11 `fig_11_test_week_forecasts_h15.png`：按总负载最接近所有完整7日窗中位数的规则选取 {week_start:%Y-%m-%d} 至 {(week_end - pd.Timedelta(minutes=5)):%Y-%m-%d}，显示三类主要预测在普通测试周对短期形状的跟随差异。",
-            f"- 图12 `fig_12_burst_window_zoom_h15.png`：客观选取测试期最高真实负载窗 {burst_center.isoformat()}，三类预测均未越过训练P95，直观解释固定阈值下TP=0。",
-            f"- 图13 `fig_13_model_mae_f1_h15.png`：{mae_winner}总体MAE最小，但所有方法F1均为0，说明总体准确率优势不能推出突发识别有效。",
-            f"- 图14 `fig_14_pr_curves_h15.png`：{ap_winner}在仅5个正例下获得最高AP，但曲线离散且置信不稳，结论只作排序证据。",
-            "- 图15 `fig_15_burst_confusion_matrices_h15.png`：Seasonal Naive、XGBoost与LSTM对5个真实突发的FN均为5，固定容量阈值下不存在被掩盖的命中。",
-            f"- 图16 `fig_16_segment_error_burst_h15.png`：非突发时段MAE最低的是{nonburst_best}，突发时段MAE最低的是{burst_best}，且突发误差量级显著更高。",
-            "- 图17 `fig_17_segment_error_phases_h15.png`：误差随相对日内/周内相位变化，但这些相位只能解释匿名轨迹位置，不能命名为真实日期或周末。",
-            "- 图18 `fig_18_segment_error_composition_h15.png`：服务构成高低组存在误差差异，但该图是目标时点事后分组，不构成可用于部署的未来构成特征。",
+            f"- Figure 11 `fig_11_test_week_forecasts_h15.png`: the week from {week_start:%Y-%m-%d} to {(week_end - pd.Timedelta(minutes=5)):%Y-%m-%d} has total load closest to the median among complete seven-day windows and shows how three primary forecasts follow ordinary short-term test patterns.",
+            f"- Figure 12 `fig_12_burst_window_zoom_h15.png`: the objectively selected maximum test load at {burst_center.isoformat()} shows that none of the three predictions crosses the training P95, explaining TP=0 at the fixed threshold.",
+            f"- Figure 13 `fig_13_model_mae_f1_h15.png`: {mae_winner} has the lowest overall MAE, but every method has F1=0, so average accuracy does not establish effective burst detection.",
+            f"- Figure 14 `fig_14_pr_curves_h15.png`: {ap_winner} has the highest AP with only five positive cases, but the curve is discrete and uncertain, so it provides ranking evidence only.",
+            "- Figure 15 `fig_15_burst_confusion_matrices_h15.png`: Seasonal Naive, XGBoost, and LSTM each have five false negatives for the five true bursts, with no hidden hits at the fixed capacity threshold.",
+            f"- Figure 16 `fig_16_segment_error_burst_h15.png`: {nonburst_best} has the lowest non-burst MAE and {burst_best} has the lowest burst MAE, while burst errors are substantially larger.",
+            "- Figure 17 `fig_17_segment_error_phases_h15.png`: error changes across relative daily and weekly phases, but these phases describe anonymous trace positions and cannot be named as real dates or weekends.",
+            "- Figure 18 `fig_18_segment_error_composition_h15.png`: errors differ between high and low service-composition groups, but this target-time retrospective grouping is not a deployable future-composition feature.",
             "",
-            "### 主测试集使用次数记录",
+            "### Primary test-set usage record",
             "",
-            "- 冻结预测阶段：基线脚本一次生成全部窗口；XGBoost和LSTM各窗口分别仅调用一次最终测试预测（各3次），均发生在全部验证配置冻结后。",
-            "- 本次统一评价：`src/07_evaluate.py`只读取既有预测文件进行一次报告性汇总，不重新拟合或选择模型。",
-            "- 后续最小消融：完整特征复用已冻结h15测试预测；仅两个预定义消融变体各允许一次测试预测并只作最终汇报。",
+            "- Frozen prediction stage: the baseline script generates all horizons once. XGBoost and LSTM each make one final test prediction per horizon, three calls each, after all validation configurations are frozen.",
+            "- Unified evaluation: `src/07_evaluate.py` reads existing prediction files for one reporting summary and does not refit or select models.",
+            "- Later minimal ablation: the full feature set reuses the frozen h15 test prediction. Only two predefined ablation variants receive one test prediction each for final reporting.",
             "",
             marker_end,
         ]

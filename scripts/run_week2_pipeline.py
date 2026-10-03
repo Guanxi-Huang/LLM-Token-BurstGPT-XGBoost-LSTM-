@@ -11,7 +11,6 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 STAGES = (
     PROJECT_ROOT / "src" / "02_build_series.py",
     PROJECT_ROOT / "src" / "04_baselines.py",
-    PROJECT_ROOT / "src" / "07_evaluate.py",
     PROJECT_ROOT / "scripts" / "build_eda_notebook.py",
     PROJECT_ROOT / "scripts" / "validate_week2_outputs.py",
 )

@@ -1,39 +1,35 @@
-# 无泄漏 XGBoost：调参、解释与测试结论
+# XGBoost Results
 
-## 方法冻结
+## Frozen method
 
-- `src/03_features.py` 先按时间排序，所有负载与请求结构统计均以 `shift(1)` 为入口；模型/API占比只由过去窗口计数聚合得到。
-- 5、15、60分钟目标分别由未来1、3、12个5分钟点生成。样本集合由 `target_time` 在原始时间切分中的位置决定，而不是由 `feature_time` 决定。
-- 每个窗口从给定的六维有限参数空间中以 seed 42 固定抽取12组，共记录36次验证结果。主评分是验证 MAE，同时记录固定训练集P95阈值下的F1。
-- 三个窗口的参数全部写入配置后，脚本才打开测试分片。测试集不参与特征选择、参数选择或停止规则，每个最终模型只调用一次测试预测。
+All lagged and rolling features enter through a one-window shift.
+Model and service-type shares are calculated only from completed historical windows.
+The 5, 15, and 60-minute targets correspond to 1, 3, and 12 future five-minute steps.
+Samples are assigned to splits by target time.
 
-## 验证集选择结果
+Each horizon uses 12 candidates drawn with seed 42 from a predefined search space.
+The selected candidate has the lowest validation MAE, with simpler depth and tree count used only as deterministic tie-breakers.
+The test set is not used for feature or parameter selection.
 
-| 窗口 | `max_depth` | `learning_rate` | `n_estimators` | `min_child_weight` | `subsample` | `colsample_bytree` | 验证MAE | 验证F1 |
-|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| 5分钟 | 7 | 0.05 | 600 | 5 | 0.9 | 0.7 | 16,491.30 | 0.7836 |
-| 15分钟 | 7 | 0.02 | 600 | 1 | 1.0 | 0.9 | 23,925.14 | 0.6482 |
-| 60分钟 | 7 | 0.05 | 600 | 5 | 0.9 | 0.7 | 32,811.23 | 0.4040 |
+## Selected configurations
 
-15分钟默认 `XGBRegressor(objective="reg:squarederror", random_state=42, n_jobs=-1)` 的验证MAE为25,686.97、F1为0.6512。有限调参把MAE降低了6.86%，但并未为了F1牺牲预先指定的主指标MAE。
+| Horizon | Max depth | Learning rate | Trees | Min child weight | Subsample | Column sample |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 5 min | 7 | 0.05 | 600 | 5 | 0.9 | 0.7 |
+| 15 min | 7 | 0.02 | 600 | 1 | 1.0 | 0.9 |
+| 60 min | 7 | 0.05 | 600 | 5 | 0.9 | 0.7 |
 
-## 一次性测试结果与基线
+## Interpretation
 
-15分钟最终 XGBoost 的测试MAE为16,464.42；持久性和日季节朴素基线分别为12,342.42和15,770.35。XGBoost分别落后33.40%和4.40%，所以主要任务结论是**未优于两条基线**。该结果原样保留，测试后没有继续调参。
+At the primary 15-minute horizon, XGBoost produced the best test MAE in the frozen comparison.
+Its advantage was not equally strong in every time segment, and Persistence remained competitive on validation data.
+This difference is consistent with temporal distribution shift rather than a universal model ranking.
 
-这是可解释的分布漂移结果：验证集实际平均负载为53,287.20 Token/5min，测试集降至13,393.33，下降74.86%；15分钟 XGBoost 测试预测均值为20,730.35，平均正偏差7,337.02。持久性基线预测均值为13,377.49，能更快跟随测试期的低负载水平。测试期只有5个窗口超过训练集P95阈值，而验证期有157个，因此测试F1为0不能据此继续选择模型。
+Historical request volume and recent load statistics were the strongest predictors.
+Relative daily and weekly phases added context but did not replace short-term workload history.
 
-预测诊断也保留了不理想证据：15分钟最终预测不是常数，目标时间全部对齐，但5,228行中有618个原始预测为负。为避免看到测试结果后增加有利的后处理，本轮不事后截零；后续若研究非负约束或预注册的 `max(prediction, 0)`，必须作为新实验只用训练/验证数据确定规则。
+The fixed training P95 burst threshold became poorly calibrated after the overall load level fell.
+As a result, improved continuous forecast error did not guarantee useful burst F1.
+The result supports separate model validation and alert-policy calibration.
 
-## 解释性检查
-
-15分钟模型的原生重要性前三项是 `rolling_max_3`、`lag_1`、`rolling_mean_3`；2,000行验证样本的平均绝对SHAP前三项是 `lag_1`、`rolling_max_3`、`api_share_history_12`。它们全部来自预测时点以前的负载或请求结构，没有未来目标、未来请求数、未来模型占比、真实星期或周末字段。
-
-机器可读证据：
-
-- `outputs/tables/table_03_feature_split_summary.csv`：目标时间切分与样本边界。
-- `outputs/tables/xgb_tuning_log.csv`：36次候选结果与选择标记。
-- `outputs/tables/table_04_xgb_results.csv`：默认、验证定型与一次性测试指标。
-- `outputs/tables/table_04_xgb_vs_baselines_h15.csv`：主要任务基线差异。
-- `outputs/tables/table_04_xgb_h15_error_analysis.csv`：验证/测试分布与偏差诊断。
-- `outputs/tables/xgb_feature_importance_h*.csv`、`xgb_shap_importance_h*.csv`：原生与SHAP重要性。
+Detailed metrics and prediction rows are generated under `outputs/tables/` and are excluded from Git because they are reproducible build artefacts.

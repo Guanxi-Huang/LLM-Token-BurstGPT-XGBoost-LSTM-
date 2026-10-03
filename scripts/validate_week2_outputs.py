@@ -23,6 +23,7 @@ def require(path: Path) -> None:
 
 
 def main() -> None:
+    eda_builder_path = PROJECT_ROOT / "scripts" / "build_eda_notebook.py"
     required_files = [
         SERIES_PATH,
         PROJECT_ROOT / "notebooks" / "02_eda.ipynb",
@@ -36,6 +37,14 @@ def main() -> None:
     ]
     for path in required_files:
         require(path)
+
+    eda_source = eda_builder_path.read_text(encoding="utf-8")
+    forbidden_title_calls = ("plt.title(", ".set_title(", ".suptitle(", "fig.text(")
+    for call in forbidden_title_calls:
+        assert call not in eda_source, f"Formal EDA figures must not use {call}"
+    assert ".text(" not in eda_source, (
+        "Formal EDA figures must not simulate a title or subtitle with canvas text"
+    )
 
     series = pd.read_parquet(SERIES_PATH)
     series.index = pd.DatetimeIndex(pd.to_datetime(series.index, utc=True))
@@ -132,6 +141,8 @@ def main() -> None:
         with Image.open(path) as image:
             width, height = image.size
             assert width >= 1000 and height >= 500, f"Unexpectedly small figure: {name} {image.size}"
+            dpi = image.info.get("dpi")
+            assert dpi is not None and min(dpi) >= 299, f"Figure is below 300 DPI: {name} {dpi}"
 
     print("Week-2 acceptance checks passed:")
     print(f"  canonical grid: {len(series):,} rows; {raw_rows:,} requests; {raw_tokens:,} tokens")
@@ -140,7 +151,7 @@ def main() -> None:
     print("  target-aligned baselines: valid/test × 3 horizons passed")
     print("  evaluation rows: 12; every confusion matrix reconciled")
     print(f"  executed notebook: {len(code_cells)} code cells; no errors")
-    print("  figures: 10/10 present and dimension-checked")
+    print("  figures: 10/10 present, title-free, and dimension-checked")
 
 
 if __name__ == "__main__":

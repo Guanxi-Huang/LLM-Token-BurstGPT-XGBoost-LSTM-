@@ -34,13 +34,14 @@ def build_notebook():
 
             ## tl;dr
 
-            本 Notebook 只分析1/2号主实验批次构成的完整5分钟网格，并把所有图片保存到 `outputs/figures/`。公开时间字段是相对秒；1970日期仅为方便重采样的合成UTC轴，因此下文只讨论**相对日内时段、相对周相位和相对日编号**，不解释真实星期、周末或节假日。
+            This notebook analyses only the complete five-minute grid built from primary batches 1 and 2 and saves all figures to `outputs/figures/`. Public time is relative seconds, and the 1970 dates form only a synthetic UTC axis for resampling. The analysis therefore uses **relative time of day, relative weekly phase, and relative day number** without interpreting real weekdays, weekends, or holidays.
             """
         ),
         code(
             """
             from pathlib import Path
             import os
+            import sys
 
             PROJECT_ROOT = Path.cwd()
             if not (PROJECT_ROOT / "data" / "processed" / "series_5min.parquet").exists():
@@ -59,33 +60,30 @@ def build_notebook():
             from IPython.display import Image, Markdown, display
             from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
+            sys.path.insert(0, str(PROJECT_ROOT / "src"))
+            from plot_style import (
+                COLORS,
+                HEATMAP_CMAP,
+                MODEL_COLORS,
+                MODEL_LINESTYLES,
+                apply_plot_style,
+                save_figure,
+            )
+
             SEED = 42
             FIGURE_DIR = PROJECT_ROOT / "outputs" / "figures"
             FIGURE_DIR.mkdir(parents=True, exist_ok=True)
-            BLUE = "#31688E"
-            BLUE_LIGHT = "#A9C7D8"
-            GOLD = "#E69F00"
-            ORANGE = "#D55E00"
-            INK = "#232A31"
-            GREY = "#6B7280"
-            GRID = "#D9DEE5"
-            sns.set_theme(style="whitegrid", context="notebook")
-            plt.rcParams.update({
-                "figure.facecolor": "white",
-                "axes.facecolor": "white",
-                "axes.edgecolor": INK,
-                "axes.labelcolor": INK,
-                "axes.titlecolor": INK,
-                "xtick.color": GREY,
-                "ytick.color": GREY,
-                "grid.color": GRID,
-                "grid.linewidth": 0.7,
-                "font.family": "DejaVu Sans",
-            })
+            BLUE = COLORS["blue"]
+            BLUE_LIGHT = "#A9B9D6"
+            GOLD = COLORS["orange"]
+            ORANGE = COLORS["magenta"]
+            INK = COLORS["ink"]
+            GREY = COLORS["dark_gray"]
+            apply_plot_style()
 
             def save_and_show(fig, filename):
                 path = FIGURE_DIR / filename
-                fig.savefig(path, dpi=180, bbox_inches="tight", facecolor="white")
+                save_figure(fig, path)
                 plt.close(fig)
                 display(Image(filename=str(path)))
                 return path
@@ -105,9 +103,9 @@ def build_notebook():
             load_cv = float(series["token_load"].std() / series["token_load"].mean())
             spearman = float(series[["request_count", "token_load"]].corr(method="spearman").iloc[0, 1])
             display(Markdown(
-                f"**执行摘要。** 完整网格含 **{len(series):,}** 个窗口，零负载窗占 **{zero_share:.2%}**；"
-                f"训练期固定 P95 为 **{TRAIN_P95:,.2f} Token/5min**。请求数与Token负载的Spearman相关系数为 **{spearman:.3f}**，"
-                f"说明请求量是重要但不充分的负载解释变量。"
+                f"**Executive summary.** The complete grid contains **{len(series):,}** windows, with **{zero_share:.2%}** zero-load windows. "
+                f"The fixed training P95 is **{TRAIN_P95:,.2f} Token/5min**. The Spearman correlation between request count and token load is **{spearman:.3f}**, "
+                f"showing that request volume is important but does not fully explain token load."
             ))
             """
         ),
@@ -117,10 +115,10 @@ def build_notebook():
 
             ### Key Assumptions
 
-            - 输入：`data/processed/requests_1.parquet`、`requests_2.parquet` 经 `src/02_build_series.py` 聚合得到的 `series_5min.parquet`。
-            - 时间窗：左闭右开 `[t, t+5min)`；零请求窗保留，Token负载和计数为0，均值为NaN。
-            - 切分和突发：按时间70%/15%/15%，P95只在训练段计算并固定用于三段。
-            - 图表问题限定为特征设计、朴素基线和结果讨论；不会把相对周相位解释为真实星期或周末。
+            - Input: `series_5min.parquet`, aggregated by `src/02_build_series.py` from `data/processed/requests_1.parquet` and `requests_2.parquet`.
+            - Windows: left-closed and right-open `[t, t+5min)`; zero-request windows are retained with zero load and count and NaN means.
+            - Split and bursts: chronological 70%/15%/15%; P95 is calculated only on training data and fixed for all three splits.
+            - Scope: feature design, naive baselines, and result interpretation; relative weekly phase is never interpreted as a real weekday or weekend.
 
             ## Data
             """
@@ -151,23 +149,21 @@ def build_notebook():
             """
             fig, ax = plt.subplots(figsize=(13, 5.2))
             relative_days = (series.index - series.index.min()).total_seconds() / 86_400
-            ax.plot(relative_days, series["token_load"], color=BLUE_LIGHT, linewidth=0.35, alpha=0.35, label="5-minute load")
+            ax.plot(relative_days, series["token_load"], color=BLUE_LIGHT, linewidth=1.8, alpha=0.20, label="5-minute load")
             rolling_day = series["token_load"].rolling(288, min_periods=1).mean()
-            ax.plot(relative_days, rolling_day, color=BLUE, linewidth=1.5, label="24-hour trailing mean")
-            ax.axhline(TRAIN_P95, color=GREY, linewidth=1.1, linestyle=":", label="Train P95")
-            ax.set_title("Complete 5-minute token-load series", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, "Relative timeline; 5-minute load, trailing 24-hour mean, and fixed train P95", transform=ax.transAxes, fontsize=9, color=GREY)
+            ax.plot(relative_days, rolling_day, color=BLUE, linewidth=2.2, label="24-hour trailing mean")
+            ax.axhline(TRAIN_P95, color=GREY, linewidth=1.8, linestyle=":", label="Train P95")
             ax.set_xlabel("Relative day from trace start")
             ax.set_ylabel("Tokens per 5-minute window")
             ax.yaxis.set_major_formatter(mtick.FuncFormatter(lambda value, _: f"{value / 1e6:.1f}M"))
             ax.spines[["top", "right"]].set_visible(False)
-            ax.legend(frameon=False, ncol=3, loc="upper center", bbox_to_anchor=(0.5, -0.16))
+            ax.legend(frameon=False, loc="upper right")
             save_and_show(fig, "fig_01_full_series_trend.png")
             first_half = rolling_day.iloc[:len(series)//2].median()
             second_half = rolling_day.iloc[len(series)//2:].median()
             display(Markdown(
-                f"**观察：** 负载变异系数为 **{load_cv:.2f}**，并存在明显的长尾尖峰；后半段24小时滚动均值中位数是前半段的 **{second_half / max(first_half, 1):.2f} 倍**。"
-                "这支持使用滞后/滚动特征，同时提示固定训练阈值在后续分布漂移下可能失配。"
+                f"**Observation:** The load coefficient of variation is **{load_cv:.2f}** with clear long-tail spikes. The median 24-hour rolling mean in the second half is **{second_half / max(first_half, 1):.2f} times** the first-half value. "
+                "This supports lagged and rolling features while warning that a fixed training threshold may become miscalibrated after distribution shift."
             ))
             """
         ),
@@ -184,10 +180,8 @@ def build_notebook():
             week_data = series.loc[week_id == representative_week]
             phase_days = np.arange(len(week_data)) / 288
             fig, ax = plt.subplots(figsize=(13, 5))
-            ax.plot(phase_days, week_data["token_load"], color=BLUE, linewidth=0.7)
-            ax.axhline(TRAIN_P95, color=GREY, linestyle=":", linewidth=1.1, label="Train P95")
-            ax.set_title("Representative relative week at 5-minute resolution", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, f"Relative week {representative_week}; selected by total load nearest the median complete week", transform=ax.transAxes, fontsize=9, color=GREY)
+            ax.plot(phase_days, week_data["token_load"], color=BLUE, linewidth=1.8)
+            ax.axhline(TRAIN_P95, color=GREY, linestyle=":", linewidth=1.8, label="Train P95")
             ax.set_xlabel("Relative day within selected 7-day phase (not calendar weekday)")
             ax.set_ylabel("Tokens per 5-minute window")
             ax.yaxis.set_major_formatter(mtick.FuncFormatter(lambda value, _: f"{value / 1e6:.1f}M"))
@@ -198,8 +192,8 @@ def build_notebook():
             save_and_show(fig, "fig_02_representative_relative_week.png")
             peak_position = int(np.argmax(week_data["token_load"].to_numpy()))
             display(Markdown(
-                f"**观察：** 典型完整周内仍有强烈的窗间波动，最大负载位于相对周相位 **{peak_position / 288:.2f} 天**。"
-                "该相位只用于周期特征与季节朴素基线，不代表真实星期几。"
+                f"**Observation:** A representative complete week still has strong window-to-window variation, with maximum load at relative weekly phase **{peak_position / 288:.2f} days**. "
+                "This phase supports periodic features and the Seasonal Naive baseline but does not represent a real weekday."
             ))
             """
         ),
@@ -213,39 +207,42 @@ def build_notebook():
             phase["token_load"] = series["token_load"].to_numpy()
             heatmap = phase.pivot_table(index="relative_day_in_week", columns="slot_in_day", values="token_load", aggfunc="mean")
             fig, ax = plt.subplots(figsize=(14, 4.8))
-            sns.heatmap(heatmap, cmap=sns.light_palette(BLUE, as_cmap=True), ax=ax, cbar_kws={"label": "Mean tokens / 5 min"})
+            sns.heatmap(heatmap, cmap=HEATMAP_CMAP, ax=ax, cbar_kws={"label": "Mean tokens / 5 min"})
             ticks = np.arange(0, 289, 48)
             ax.set_xticks(ticks)
             ax.set_xticklabels([f"{int(value // 12):02d}:00" for value in ticks])
             ax.set_yticklabels([f"Relative day {value + 1}" for value in heatmap.index], rotation=0)
-            ax.set_title("Mean load by relative weekly phase", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.02, "Seven trace-relative days × 288 five-minute time-of-day slots; not calendar weekdays", transform=ax.transAxes, fontsize=9, color=GREY)
             ax.set_xlabel("Relative time-of-day phase")
             ax.set_ylabel("Relative day within 7-day phase")
             save_and_show(fig, "fig_03_relative_week_phase_heatmap.png")
             peak_day, peak_slot = np.unravel_index(np.nanargmax(heatmap.to_numpy()), heatmap.shape)
             display(Markdown(
-                f"**观察：** 平均负载最高的相对相位是第 **{peak_day + 1}** 个相对日、约 **{peak_slot // 12:02d}:{(peak_slot % 12) * 5:02d}**。"
-                "相位结构可支持正余弦周期特征，但不能据此声称存在真实工作日/周末效应。"
+                f"**Observation:** The highest mean load occurs on relative day **{peak_day + 1}** at about **{peak_slot // 12:02d}:{(peak_slot % 12) * 5:02d}**. "
+                "This phase structure supports sine and cosine features but cannot establish real weekday or weekend effects."
             ))
             """
         ),
         markdown("### Figure 04 — Log-transformed token-load distribution"),
         code(
             """
-            log_load = np.log1p(series["token_load"].to_numpy(dtype=float))
+            positive_load = series.loc[series["token_load"].gt(0), "token_load"]
+            positive_log_load = np.log1p(positive_load.to_numpy(dtype=float))
+            zero_windows = int(series["token_load"].eq(0).sum())
+            excluded_below_view = int((positive_log_load < 4).sum())
             fig, ax = plt.subplots(figsize=(10, 5))
-            sns.histplot(log_load, bins=80, stat="density", color=BLUE, edgecolor="white", linewidth=0.25, ax=ax)
-            ax.set_title("Distribution of log-transformed 5-minute token load", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, f"All {len(series):,} windows; log1p retains zero-load windows", transform=ax.transAxes, fontsize=9, color=GREY)
+            sns.histplot(positive_log_load, bins=80, stat="density", color=BLUE, edgecolor="white", linewidth=0.25, ax=ax)
             ax.set_xlabel("log(1 + tokens per 5-minute window)")
             ax.set_ylabel("Density")
+            ax.set_xlim(4, 16)
+            ax.set_ylim(0.0, 0.3)
+            ax.set_xticks(np.arange(4, 17, 2))
+            ax.set_yticks(np.arange(0.0, 0.31, 0.05))
             ax.spines[["top", "right"]].set_visible(False)
             save_and_show(fig, "fig_04_token_load_log_distribution.png")
             q50, q95, q99 = series["token_load"].quantile([0.50, 0.95, 0.99]).to_numpy()
             display(Markdown(
-                f"**观察：** 原尺度中位数/P95/P99分别为 **{q50:,.0f} / {q95:,.0f} / {q99:,.0f} Token**，零窗占 **{zero_share:.2%}**。"
-                "长尾性支持训练时比较原尺度与log1p目标，但评价仍应回到Token原尺度。"
+                f"**Observation:** Median, P95, and P99 on the original scale are **{q50:,.0f} / {q95:,.0f} / {q99:,.0f} tokens**, with **{zero_share:.2%}** zero windows. "
+                "The long tail supports comparing original and log1p training targets, while evaluation should remain on the original token scale."
             ))
             """
         ),
@@ -261,15 +258,13 @@ def build_notebook():
                 np.log1p(scatter_data["token_load"]),
                 s=10, alpha=0.22, color=BLUE, edgecolors="none"
             )
-            ax.set_title("Request count versus token load", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, f"Deterministic sample n={len(scatter_data):,}; both axes use log1p", transform=ax.transAxes, fontsize=9, color=GREY)
             ax.set_xlabel("log(1 + requests per 5-minute window)")
             ax.set_ylabel("log(1 + tokens per 5-minute window)")
             ax.spines[["top", "right"]].set_visible(False)
             save_and_show(fig, "fig_05_request_count_vs_token_load.png")
             display(Markdown(
-                f"**观察：** 请求数与Token负载呈强单调关系（Spearman **{spearman:.3f}**），但同一请求量仍对应较宽的负载带。"
-                "因此历史请求数值得作为特征，平均请求/响应Token和模型构成也可能补充解释单次请求大小差异。"
+                f"**Observation:** Request count has a strong monotonic relationship with token load (Spearman **{spearman:.3f}**), but the same request count still spans a wide load range. "
+                "Historical request count is therefore useful, while mean input/output tokens and model composition can explain variation in request size."
             ))
             """
         ),
@@ -281,10 +276,8 @@ def build_notebook():
             daily["chatgpt_share"] = daily["chatgpt_request_count"].div(daily["request_count"].replace(0, np.nan))
             daily_relative_day = np.arange(len(daily))
             fig, ax = plt.subplots(figsize=(12, 4.8))
-            ax.plot(daily_relative_day, daily["gpt4_share"], color=BLUE, linewidth=1.5, label="GPT-4")
-            ax.plot(daily_relative_day, daily["chatgpt_share"], color=GOLD, linewidth=1.2, linestyle="--", label="ChatGPT")
-            ax.set_title("Daily model request mix over relative time", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, "Shares use daily request counts on the relative timeline", transform=ax.transAxes, fontsize=9, color=GREY)
+            ax.plot(daily_relative_day, daily["gpt4_share"], color=BLUE, linewidth=2.0, label="GPT-4")
+            ax.plot(daily_relative_day, daily["chatgpt_share"], color=GOLD, linewidth=1.8, linestyle="--", label="ChatGPT")
             ax.set_xlabel("Relative day")
             ax.set_ylabel("Share of requests")
             ax.set_ylim(0, 1)
@@ -294,8 +287,8 @@ def build_notebook():
             save_and_show(fig, "fig_06_model_share_over_time.png")
             gpt4_min, gpt4_max = daily["gpt4_share"].min(), daily["gpt4_share"].max()
             display(Markdown(
-                f"**观察：** GPT-4日请求占比在 **{gpt4_min:.2%}–{gpt4_max:.2%}** 之间变化，模型构成并非常数。"
-                "预测特征只能使用预测时点以前的构成统计，不能使用未来窗口实际模型占比。"
+                f"**Observation:** Daily GPT-4 request share ranges from **{gpt4_min:.2%} to {gpt4_max:.2%}**, so model composition is not constant. "
+                "Prediction features may use only composition statistics available before forecast time, never the actual future-window model share."
             ))
             """
         ),
@@ -305,10 +298,8 @@ def build_notebook():
             daily["api_share"] = daily["api_request_count"].div(daily["request_count"].replace(0, np.nan))
             daily["conversation_share"] = daily["conversation_request_count"].div(daily["request_count"].replace(0, np.nan))
             fig, ax = plt.subplots(figsize=(12, 4.8))
-            ax.plot(daily_relative_day, daily["api_share"], color=BLUE, linewidth=1.5, label="API log")
-            ax.plot(daily_relative_day, daily["conversation_share"], color=ORANGE, linewidth=1.2, linestyle="--", label="Conversation log")
-            ax.set_title("Daily Log Type request mix over relative time", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, "Shares use daily request counts; Log Type is the observed invocation-mode field", transform=ax.transAxes, fontsize=9, color=GREY)
+            ax.plot(daily_relative_day, daily["api_share"], color=BLUE, linewidth=2.0, label="API log")
+            ax.plot(daily_relative_day, daily["conversation_share"], color=ORANGE, linewidth=1.8, linestyle="--", label="Conversation log")
             ax.set_xlabel("Relative day")
             ax.set_ylabel("Share of requests")
             ax.set_ylim(0, 1)
@@ -318,8 +309,8 @@ def build_notebook():
             save_and_show(fig, "fig_07_log_type_share_over_time.png")
             api_min, api_max = daily["api_share"].min(), daily["api_share"].max()
             display(Markdown(
-                f"**观察：** API log日占比在 **{api_min:.2%}–{api_max:.2%}** 之间变化，且批次间构成差异会形成时间漂移。"
-                "历史API占比可作为滞后特征；未来窗口的Log Type构成不可直接输入模型。"
+                f"**Observation:** Daily API log share ranges from **{api_min:.2%} to {api_max:.2%}**, and composition differences between batches create temporal drift. "
+                "Historical API share is a valid lagged feature, while future-window Log Type composition cannot be a direct model input."
             ))
             """
         ),
@@ -328,17 +319,15 @@ def build_notebook():
             """
             transformed_load = pd.Series(np.log1p(series["token_load"].to_numpy(dtype=float)), index=series.index)
             fig, ax = plt.subplots(figsize=(12, 4.8))
-            plot_acf(transformed_load, lags=288, zero=False, fft=True, ax=ax, title="", color=BLUE, vlines_kwargs={"colors": BLUE, "linewidth": 0.7})
-            ax.set_title("Autocorrelation of log-transformed token load", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, "Lags 1–288 correspond to 5 minutes through 24 hours", transform=ax.transAxes, fontsize=9, color=GREY)
+            plot_acf(transformed_load, lags=288, zero=False, fft=True, ax=ax, title="", color=BLUE, vlines_kwargs={"colors": BLUE, "linewidth": 1.8})
             ax.set_xlabel("Lag (5-minute steps)")
             ax.set_ylabel("ACF")
             ax.spines[["top", "right"]].set_visible(False)
             save_and_show(fig, "fig_08_acf_log_load.png")
             acf_values = [transformed_load.autocorr(lag=value) for value in (1, 3, 12, 288)]
             display(Markdown(
-                f"**观察：** log负载在1/3/12/288步的ACF分别为 **{acf_values[0]:.3f}/{acf_values[1]:.3f}/{acf_values[2]:.3f}/{acf_values[3]:.3f}**。"
-                "短期持续性与288步日周期都应进入候选滞后集合，并由验证集比较其增益。"
+                f"**Observation:** Log-load ACF at 1, 3, 12, and 288 steps is **{acf_values[0]:.3f}/{acf_values[1]:.3f}/{acf_values[2]:.3f}/{acf_values[3]:.3f}**. "
+                "Short-term persistence and the 288-step daily cycle should enter the candidate lag set, with gains compared on validation data."
             ))
             """
         ),
@@ -346,16 +335,14 @@ def build_notebook():
         code(
             """
             fig, ax = plt.subplots(figsize=(12, 4.8))
-            plot_pacf(transformed_load, lags=288, zero=False, method="ywm", ax=ax, title="", color=BLUE, vlines_kwargs={"colors": BLUE, "linewidth": 0.7})
-            ax.set_title("Partial autocorrelation of log-transformed token load", loc="left", fontweight="bold", pad=16)
-            ax.text(0, 1.01, "Yule–Walker PACF; lags 1–288 (5 minutes through 24 hours)", transform=ax.transAxes, fontsize=9, color=GREY)
+            plot_pacf(transformed_load, lags=288, zero=False, method="ywm", ax=ax, title="", color=BLUE, vlines_kwargs={"colors": BLUE, "linewidth": 1.8})
             ax.set_xlabel("Lag (5-minute steps)")
             ax.set_ylabel("PACF")
             ax.spines[["top", "right"]].set_visible(False)
             save_and_show(fig, "fig_09_pacf_log_load.png")
             display(Markdown(
-                "**观察：** 控制中间滞后后，显著性主要集中在靠近原点的短滞后，同时若干更远相位仍保留信号。"
-                "这支持用稀疏的短滞后、小时级滞后和288步季节滞后，而不是把所有连续滞后都输入模型。"
+                "**Observation:** After controlling for intermediate lags, significance is concentrated in short lags near the origin, while several distant phases retain signal. "
+                "This supports sparse short, hourly, and 288-step seasonal lags instead of every consecutive lag."
             ))
             """
         ),
@@ -390,35 +377,25 @@ def build_notebook():
             ax.plot(
                 phase_hours,
                 representative["actual_token_load"],
-                color=INK,
+                color=MODEL_COLORS["Actual"],
                 linewidth=1.8,
                 label="Actual",
             )
             ax.plot(
                 phase_hours,
                 representative["pred_persistence_h15"],
-                color=BLUE,
-                linewidth=1.2,
-                linestyle="--",
+                color=MODEL_COLORS["Persistence"],
+                linewidth=1.8,
+                linestyle=MODEL_LINESTYLES["Persistence"],
                 label="Persistence (last completed window)",
             )
             ax.plot(
                 phase_hours,
                 representative["pred_seasonal_h15"],
-                color=GOLD,
-                linewidth=1.2,
-                linestyle=":",
+                color=MODEL_COLORS["Seasonal Naive"],
+                linewidth=1.8,
+                linestyle=MODEL_LINESTYLES["Seasonal Naive"],
                 label="Seasonal naive (target minus 24 h)",
-            )
-            ax.axhline(TRAIN_P95, color=GREY, linewidth=1.0, linestyle="-.", label="Train P95")
-            ax.set_title("Fifteen-minute baseline forecasts on a representative test day", loc="left", fontweight="bold", pad=16)
-            ax.text(
-                0,
-                1.01,
-                f"Relative test day {representative_day}; complete day with total load nearest the median complete test day",
-                transform=ax.transAxes,
-                fontsize=9,
-                color=GREY,
             )
             ax.set_xlabel("Relative hour within selected test day")
             ax.set_ylabel("Token load (Token/5min)")
@@ -445,9 +422,9 @@ def build_notebook():
                 )
             )
             display(Markdown(
-                f"**观察：** 该客观选取的完整测试日中，Persistence/Seasonal Naive 的15分钟 MAE 分别为 "
+                f"**Observation:** On this objectively selected complete test day, 15-minute MAE for Persistence and Seasonal Naive is "
                 f"**{persistence_mae:,.0f}/{seasonal_mae:,.0f} Token/5min**。"
-                "图只说明典型日的逐窗跟随差异，最终模型比较仍以全部5,228个测试目标窗为准。"
+                "The figure shows window-level tracking on a representative day, while final model comparison still uses all 5,228 test target windows."
             ))
             """
         ),
@@ -456,10 +433,10 @@ def build_notebook():
             """
             display(Markdown(
                 f'''
-                1. 完整网格和零窗必须保留：本序列有 **{len(series):,}** 个5分钟窗口，其中 **{int(series['is_zero_window'].sum()):,}** 个为零负载；均值特征在这些窗口保持NaN，后续只能历史填充。
-                2. 短期持续性、小时级结构和288步相对日周期均有统计依据，因此 Persistence 与 Seasonal Naive 是必须击败的基线。
-                3. 请求数与负载高度相关但不能完全解释Token大小；历史均值、模型构成和Log Type构成是合理候选特征，但必须滞后以避免未来信息泄漏。
-                4. 训练期固定P95为 **{TRAIN_P95:,.2f} Token/5min**。由于后续负载与构成存在漂移，突发检测结果必须同时报告固定阈值的跨期适用局限。
+                1. Preserve the complete grid and zero windows: the series has **{len(series):,}** five-minute windows, including **{int(series['is_zero_window'].sum()):,}** zero-load windows. Mean features remain NaN in these windows and may only be filled from history.
+                2. Short-term persistence, hourly structure, and the 288-step relative daily cycle have statistical support, so Persistence and Seasonal Naive are required baselines.
+                3. Request count is strongly related to load but does not fully explain token size. Historical means, model composition, and Log Type composition are valid candidate features only after lagging to prevent future leakage.
+                4. The fixed training P95 is **{TRAIN_P95:,.2f} Token/5min**. Later load and composition drift means burst results must report the cross-period limitation of a fixed threshold.
                 '''
             ))
             """

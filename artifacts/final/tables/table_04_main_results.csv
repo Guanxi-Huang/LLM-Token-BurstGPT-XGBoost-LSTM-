@@ -1,5 +1,0 @@
-horizon_minutes,model,n_observations,mae,mae_ci_low,mae_ci_high,rmse,rmse_ci_low,rmse_ci_high,smape_percent,smape_percent_ci_low,smape_percent_ci_high,seasonal_naive_mae,mae_improvement_vs_seasonal_percent,confidence_level,ci_method,bootstrap_blocks,bootstrap_replicates,test_role
-15,Persistence,5228,1.23e+04,6.71e+03,1.84e+04,3.72e+04,2.44e+04,4.74e+04,74.8,67.4,82.5,1.58e+04,21.7,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
-15,Seasonal Naive,5228,1.58e+04,8.02e+03,2.43e+04,4.19e+04,2.7e+04,5.36e+04,91.4,81.7,102,1.58e+04,0,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
-15,XGBoost,5228,1.65e+04,9.17e+03,2.45e+04,3.47e+04,2.28e+04,4.49e+04,130,116,146,1.58e+04,-4.4,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only
-15,LSTM,5228,1.11e+04,5.7e+03,1.73e+04,3.09e+04,1.96e+04,4.01e+04,88.1,78.6,97,1.58e+04,29.9,0.95,synthetic-UTC calendar-day block bootstrap,19,1000,post-freeze reporting only

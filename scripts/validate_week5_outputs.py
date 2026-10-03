@@ -231,9 +231,9 @@ def main() -> None:
     for phrase in (
         "WEEK5_FINAL_EVALUATION_START",
         "WEEK5_ABLATION_ROBUSTNESS_START",
-        "测试使用次数",
-        "外部零样本跨时期测试",
-        "第5周在此停止调参与阈值修改",
+        "test usage count",
+        "external zero-shot cross-period test",
+        "Week 5 ends parameter tuning and threshold changes here",
     ):
         assert phrase in log
     checks.append(

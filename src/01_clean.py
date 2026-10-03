@@ -485,13 +485,16 @@ def create_diagnostic_figures() -> None:
             label=f"Batch {batch}",
             color=colors[batch],
         )
-    ax.set_title("BurstGPT request-time distribution (relative time)")
     ax.set_xlabel("Relative day; collection calendar undisclosed")
     ax.set_ylabel("Request count")
     ax.legend(frameon=False)
     ax.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(FIGURE_DIR / "fig_00_request_time_histogram.png", dpi=180)
+    fig.savefig(
+        FIGURE_DIR / "fig_00_request_time_histogram.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
     plt.close(fig)
 
     fig, ax = plt.subplots(figsize=(8, 4.8))
@@ -505,13 +508,16 @@ def create_diagnostic_figures() -> None:
             label=f"Batch {batch}",
             color=colors[batch],
         )
-    ax.set_title("Request total-token distribution")
     ax.set_xlabel("log(1 + request tokens + response tokens)")
     ax.set_ylabel("Request count")
     ax.legend(frameon=False)
     ax.grid(alpha=0.2)
     fig.tight_layout()
-    fig.savefig(FIGURE_DIR / "fig_00_total_tokens_log_histogram.png", dpi=180)
+    fig.savefig(
+        FIGURE_DIR / "fig_00_total_tokens_log_histogram.png",
+        dpi=300,
+        bbox_inches="tight",
+    )
     plt.close(fig)
 
 

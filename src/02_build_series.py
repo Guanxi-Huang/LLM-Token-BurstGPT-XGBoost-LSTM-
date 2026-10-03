@@ -295,21 +295,21 @@ def update_experiment_log(
         "all_metrics_match",
     ]
     headers = [
-        "窗口起点（合成UTC）",
-        "窗口终点（不含）",
-        "原始Token",
-        "聚合Token",
-        "原始请求数",
-        "聚合请求数",
-        "原始平均输入",
-        "聚合平均输入",
-        "原始平均输出",
-        "聚合平均输出",
-        "原始GPT-4数",
-        "聚合GPT-4数",
-        "原始API数",
-        "聚合API数",
-        "一致",
+        "window_start_synthetic_utc",
+        "window_end_exclusive",
+        "raw_tokens",
+        "aggregated_tokens",
+        "raw_request_count",
+        "aggregated_request_count",
+        "raw_mean_input_tokens",
+        "aggregated_mean_input_tokens",
+        "raw_mean_output_tokens",
+        "aggregated_mean_output_tokens",
+        "raw_gpt4_count",
+        "aggregated_gpt4_count",
+        "raw_api_count",
+        "aggregated_api_count",
+        "matches",
     ]
     table_lines = [
         "| " + " | ".join(headers) + " |",
@@ -322,24 +322,24 @@ def update_experiment_log(
 
     boundary_row = boundary.iloc[0]
     split_text = "；".join(
-        f"{row.split}={int(row.n_rows):,}行"
+        f"{row.split}={int(row.n_rows):,} rows"
         for row in split_summary.itertuples(index=False)
     )
     block = "\n".join(
         [
             LOG_START,
             "",
-            "## 第2周：5分钟目标序列、人工核验与固定突发阈值",
+            "## Week 2: Five-minute target series, manual checks, and fixed burst threshold",
             "",
-            f"- 正式运行日期：{date.today().isoformat()}；命令：`& .\\.venv\\Scripts\\python.exe scripts/run_week2_pipeline.py`；配置：`configs/base.yaml`（seed=42）。",
-            "- 窗口语义：左闭右开 `[start, start+5min)`；公开时间仅为相对秒，表中的1970日期只是合成UTC轴。",
-            f"- 切分：{split_text}。训练集P95固定阈值为 `{threshold:.6f}` Token/5min，三段统一按 `token_load >= threshold` 标记突发。",
-            f"- 批次边界：1号最后请求到2号第一请求间隔 `{boundary_row['request_gap_seconds']:.0f}` 秒；两者所在窗口之间有 `{int(boundary_row['complete_windows_between'])}` 个完整窗口，其中 `{int(boundary_row['zero_windows_between'])}` 个为零负载。",
-            "- 以下三个窗口由seed=42从完整网格无放回抽样，再回到两个请求级Parquet用布尔条件逐项重算；均值在零请求窗保持NaN。",
+            f"- Run date: {date.today().isoformat()}; command: `& .\\.venv\\Scripts\\python.exe scripts/run_week2_pipeline.py`; configuration: `configs/base.yaml` (seed=42).",
+            "- Window contract: left-closed and right-open `[start, start+5min)`; public time is relative seconds, and the 1970 dates are only a synthetic UTC index.",
+            f"- Split: {split_text}. The training P95 threshold is fixed at `{threshold:.6f}` Token/5min, and all splits use `token_load >= threshold` as the burst label.",
+            f"- Batch boundary: `{boundary_row['request_gap_seconds']:.0f}` seconds separate the last batch 1 request and first batch 2 request; their windows contain `{int(boundary_row['complete_windows_between'])}` complete intermediate windows, including `{int(boundary_row['zero_windows_between'])}` zero-load windows.",
+            "- Three windows were sampled without replacement from the complete grid using seed 42, then recalculated from the two request-level Parquet files with explicit Boolean filters; means remain NaN for zero-request windows.",
             "",
             *table_lines,
             "",
-            "结论：三个窗口的Token总量、请求数、输入/输出Token均值、GPT-4请求数和API请求数全部一致；窗口边界与零窗构造通过人工复算。",
+            "Conclusion: total tokens, request counts, mean input and output tokens, GPT-4 counts, and API counts match for all three windows; manual recalculation confirms window boundaries and zero-window construction.",
             "",
             LOG_END,
         ]

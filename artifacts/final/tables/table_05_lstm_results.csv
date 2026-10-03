@@ -1,4 +1,0 @@
-split,model,feature_set,horizon_minutes,n_observations,mae,rmse,smape_percent,precision,recall,f1,true_negative,false_positive,false_negative,true_positive,actual_burst_windows,predicted_burst_windows,burst_threshold,negative_predictions_after_clip,n_unique_predictions,target_time_aligned
-test,lstm_final,main,5,5228,11464.00192547939,31814.992993831747,87.24082168928221,0.0,0.0,0.0,5223,0,5,0,5,0,315246.19999999995,0,3341,True
-test,lstm_final,main,15,5228,11054.479531787969,30904.245809772394,88.08902189994636,0.0,0.0,0.0,5223,0,5,0,5,0,315246.19999999995,0,3549,True
-test,lstm_final,main,60,5228,13710.541306277497,34256.438956464415,128.8136940672228,0.0,0.0,0.0,5223,0,5,0,5,0,315246.19999999995,0,4741,True

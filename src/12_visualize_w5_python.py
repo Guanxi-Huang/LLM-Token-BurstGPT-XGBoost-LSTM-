@@ -88,11 +88,6 @@ def write(frame: pd.DataFrame, name: str) -> None:
     frame.to_csv(SHARED / name, index=False, float_format="%.10g")
 
 
-def figure_header(fig: plt.Figure, heading: str, subtitle: str) -> None:
-    fig.suptitle(heading, x=0.055, y=0.985, ha="left", va="top", weight="bold", color=INK)
-    fig.text(0.055, 0.94, subtitle, ha="left", va="top", color=MUTED, fontsize=8.5)
-
-
 def style_axis(axis: plt.Axes, *, zero_line: bool = False) -> None:
     axis.spines[["top", "right"]].set_visible(False)
     axis.grid(axis="y", visible=True)
@@ -113,7 +108,7 @@ def token_formatter(value: float, _position: int) -> str:
 
 def save(fig: plt.Figure, name: str) -> Path:
     path = FIGURES / name
-    fig.savefig(path, dpi=220, bbox_inches="tight", facecolor="white")
+    fig.savefig(path, dpi=300, bbox_inches="tight", facecolor="white")
     plt.close(fig)
     return path
 
@@ -234,8 +229,7 @@ def plot_h15_regression(data: dict[str, object]) -> Path:
         axis.yaxis.set_major_formatter(mticker.FuncFormatter(token_formatter))
         axis.set_ylim(bottom=0)
         style_axis(axis)
-    figure_header(fig, "W5-PY-01 Main 15-minute regression accuracy", "Bars are frozen test estimates; whiskers are 95% synthetic-day block-bootstrap intervals")
-    fig.subplots_adjust(left=0.07, right=0.98, top=0.82, bottom=0.22, wspace=0.28)
+    fig.subplots_adjust(left=0.07, right=0.98, top=0.97, bottom=0.22, wspace=0.28)
     return save(fig, "fig_w5_py_01_h15_regression_accuracy.png")
 
 
@@ -261,8 +255,7 @@ def plot_horizon_mae(data: dict[str, object]) -> Path:
     if float(metrics["f1"].max()) <= 1e-12:
         axes[1].text(0.5, 0.52, "All models and horizons: F1 = 0", transform=axes[1].transAxes, ha="center", va="center", color=MUTED, fontsize=10, weight="bold")
     axes[0].legend(ncol=4, loc="lower left", bbox_to_anchor=(0, 1.02))
-    figure_header(fig, "W5-PY-02 Overall MAE and burst F1 across horizons", "The 15-minute task is primary; 5- and 60-minute tasks are frozen appendix results")
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.78, bottom=0.14, wspace=0.28)
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.88, bottom=0.14, wspace=0.28)
     return save(fig, "fig_w5_py_02_mae_by_horizon.png")
 
 
@@ -280,8 +273,7 @@ def plot_week(data: dict[str, object]) -> Path:
     axis.yaxis.set_major_formatter(mticker.FuncFormatter(token_formatter))
     axis.legend(ncol=5, loc="upper left", bbox_to_anchor=(0, 1.03))
     style_axis(axis)
-    figure_header(fig, "W5-PY-03 Representative test-week forecasts (h15)", f"Objective selection: complete synthetic-UTC week closest to median weekly load; starts {data['week_start']:%Y-%m-%d}")
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.78, bottom=0.14)
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.97, bottom=0.14)
     return save(fig, "fig_w5_py_03_representative_week_h15.png")
 
 
@@ -299,8 +291,7 @@ def plot_burst_zoom(data: dict[str, object]) -> Path:
     axis.yaxis.set_major_formatter(mticker.FuncFormatter(token_formatter))
     axis.legend(ncol=3, loc="upper left", bbox_to_anchor=(0, 1.03))
     style_axis(axis)
-    figure_header(fig, "W5-PY-04 Local burst-window detail (h15)", f"Centered on the maximum observed target window at {data['center'].isoformat()}; one train-only P95 is used throughout")
-    fig.subplots_adjust(left=0.08, right=0.985, top=0.77, bottom=0.15)
+    fig.subplots_adjust(left=0.08, right=0.985, top=0.97, bottom=0.15)
     return save(fig, "fig_w5_py_04_burst_zoom_h15.png")
 
 
@@ -317,8 +308,7 @@ def plot_pr(data: dict[str, object]) -> Path:
     axis.set(xlim=(0, 1), ylim=(0, 1.02), xlabel="Recall", ylabel="Precision")
     axis.legend(loc="upper right")
     style_axis(axis)
-    figure_header(fig, "W5-PY-05 Burst precision-recall curves (h15)", "Scores are forecast token loads; AP complements the single frozen P95 operating point")
-    fig.subplots_adjust(left=0.11, right=0.97, top=0.82, bottom=0.12)
+    fig.subplots_adjust(left=0.11, right=0.97, top=0.97, bottom=0.12)
     return save(fig, "fig_w5_py_05_pr_curves_h15.png")
 
 
@@ -335,15 +325,13 @@ def plot_confusion(data: dict[str, object]) -> Path:
         for i in range(2):
             for j in range(2):
                 axis.text(j, i, f"{int(matrix[i, j])}\n({normalized[i, j]:.1%})", ha="center", va="center", color=("white" if normalized[i, j] > 0.55 else INK), fontsize=9)
-        axis.set_title(model, fontsize=10, weight="bold")
         axis.set_xticks([0, 1], ["Non-burst", "Burst"], rotation=25, ha="right")
         axis.set_yticks([0, 1], ["Non-burst", "Burst"])
         axis.grid(False)
     axes[0].set_ylabel("Actual class")
-    for axis in axes:
-        axis.set_xlabel("Predicted class")
-    figure_header(fig, "W5-PY-06 Burst confusion matrices at the frozen P95 (h15)", "Counts and row-normalized shares distinguish rare-event misses from ordinary-window classification")
-    fig.subplots_adjust(left=0.065, right=0.99, top=0.76, bottom=0.22, wspace=0.32)
+    for axis, model in zip(axes, MODEL_ORDER, strict=True):
+        axis.set_xlabel(f"Predicted class - {model}")
+    fig.subplots_adjust(left=0.065, right=0.99, top=0.96, bottom=0.24, wspace=0.32)
     return save(fig, "fig_w5_py_06_confusion_matrices_h15.png")
 
 
@@ -365,8 +353,7 @@ def plot_burst_segment(data: dict[str, object]) -> Path:
     axes[0].set_ylabel("MAE (Token/5-min)")
     axes[1].set_ylabel("Mean bias: y_pred - y_true (Token/5-min)")
     axes[0].legend(loc="upper left")
-    figure_header(fig, "W5-PY-07 Error in burst versus non-burst windows (h15)", "MAE measures magnitude; signed bias reveals systematic under- or over-prediction")
-    fig.subplots_adjust(left=0.08, right=0.985, top=0.80, bottom=0.22, wspace=0.30)
+    fig.subplots_adjust(left=0.08, right=0.985, top=0.97, bottom=0.22, wspace=0.30)
     return save(fig, "fig_w5_py_07_burst_segment_mae_bias_h15.png")
 
 
@@ -390,8 +377,7 @@ def plot_other_segments(data: dict[str, object]) -> Path:
         axes[row, 0].set_ylabel(f"{label}\nMAE")
         axes[row, 1].set_ylabel("Mean bias")
     axes[0, 0].legend(ncol=4, loc="lower left", bbox_to_anchor=(0, 1.08))
-    figure_header(fig, "W5-PY-08 Pre-specified segment error profiles (h15)", "Relative phases are not real weekdays; target-time composition is diagnostic grouping only, never a future feature")
-    fig.subplots_adjust(left=0.10, right=0.99, top=0.90, bottom=0.07, hspace=0.72, wspace=0.28)
+    fig.subplots_adjust(left=0.10, right=0.99, top=0.97, bottom=0.07, hspace=0.72, wspace=0.28)
     return save(fig, "fig_w5_py_08_segment_profiles_h15.png")
 
 
@@ -414,8 +400,7 @@ def plot_ablation(data: dict[str, object]) -> Path:
     axis.set_ylim(bottom=0)
     axis.legend(loc="upper left")
     style_axis(axis)
-    figure_header(fig, "W5-PY-09 Minimal XGBoost ablation (h15)", "The selected feature set is determined by validation MAE only; test bars are final reporting evidence")
-    fig.subplots_adjust(left=0.095, right=0.985, top=0.79, bottom=0.15)
+    fig.subplots_adjust(left=0.095, right=0.985, top=0.97, bottom=0.15)
     return save(fig, "fig_w5_py_09_xgb_ablation_h15.png")
 
 
@@ -439,8 +424,7 @@ def plot_robustness(data: dict[str, object]) -> Path:
     axes[1].set_ylabel("Burst F1 at train-1/2 P95")
     axes[1].set_ylim(0, 1.02)
     axes[0].legend(ncol=4, loc="lower left", bbox_to_anchor=(0, 1.02))
-    figure_header(fig, "W5-PY-10 BurstGPT-3 external zero-shot robustness", "Models and the train-1/2 P95 are transferred without fitting or selecting on batch 3")
-    fig.subplots_adjust(left=0.075, right=0.985, top=0.78, bottom=0.14, wspace=0.28)
+    fig.subplots_adjust(left=0.075, right=0.985, top=0.88, bottom=0.14, wspace=0.28)
     return save(fig, "fig_w5_py_10_burstgpt3_robustness.png")
 
 
